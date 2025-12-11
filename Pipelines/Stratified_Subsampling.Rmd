@@ -1,0 +1,525 @@
+---
+title: "Stratified_Subsampling"
+author: "Sachin Subedi"
+date: "2025-12-10"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+#Set Working Directory
+```{r}
+setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/")
+```
+
+### Loading data for subsampling
+```{r}
+data <- read.delim("final_seq_data.tsv", sep="\t", stringsAsFactors=FALSE)
+colnames(data)
+```
+## Extract seasons, year and Habitat
+```{r}
+library(lubridate)
+data <- data %>%
+  mutate(
+    Year = year(Collection_Date_Final)
+  )
+
+
+selected_locations <- unique(data$Country)
+selected_years     <- unique(data$Year)
+selected_habitats  <- unique(data$Habitat)
+```
+
+## Subsampling using random seeds
+```{r}
+subsample_and_save <- function(data, seed, label, max_samples = 2) {
+  set.seed(seed)
+
+  subsampled_data <- data %>%
+    group_by(Country, Year, Habitat) %>%
+    group_modify(function(.x, .y) {
+      if (nrow(.x) <= max_samples) {
+        return(.x)
+      } else {
+        return(slice_sample(.x, n = max_samples))
+      }
+    }) %>%
+    ungroup()
+
+  subsampled_counts <- subsampled_data %>%
+    group_by(Country, Year, Habitat) %>%
+    summarise(isolate_count = n_distinct(Isolate_Id), .groups = "drop")
+
+  # Checks
+  cat("\n==========", label, "==========\n")
+  print(subsampled_counts)
+  print(table(subsampled_data$Country))
+  print(table(subsampled_data$Year))
+  print(table(subsampled_data$Habitat))
+
+  # Create folder if not exists
+  if (!dir.exists(label)) dir.create(label)
+
+  # Save TSV inside the folder
+  out_file <- file.path(label, paste0(label, ".tsv"))
+  write.table(subsampled_data, out_file, sep="\t", row.names=FALSE, quote=FALSE)
+
+  return(list(data = subsampled_data, counts = subsampled_counts))
+}
+
+subsampled1 <- subsample_and_save(data, seed = 2324,   label = "subsampled1")
+subsampled2 <- subsample_and_save(data, seed = 147181, label = "subsampled2")
+subsampled3 <- subsample_and_save(data, seed = 8848,   label = "subsampled3")
+
+```
+
+### Comparison of different subsamples
+```{r}
+
+
+library(dplyr)
+library(readr)
+
+base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/"
+
+sub1 <- read_tsv(file.path(base_dir, "subsampled1", "subsampled1.tsv"), show_col_types = FALSE)
+sub2 <- read_tsv(file.path(base_dir, "subsampled2", "subsampled2.tsv"), show_col_types = FALSE)
+sub3 <- read_tsv(file.path(base_dir, "subsampled3", "subsampled3.tsv"), show_col_types = FALSE)
+
+# Extract IDs
+ids1 <- unique(sub1$Isolate_Id)
+ids2 <- unique(sub2$Isolate_Id)
+ids3 <- unique(sub3$Isolate_Id)
+
+cat("Counts:\n")
+cat("subsampled1:", length(ids1), "unique IDs\n")
+cat("subsampled2:", length(ids2), "unique IDs\n")
+cat("subsampled3:", length(ids3), "unique IDs\n\n")
+
+# Pairwise overlaps
+cat("Overlaps:\n")
+cat("1 ∩ 2:", length(intersect(ids1, ids2)), "\n")
+cat("1 ∩ 3:", length(intersect(ids1, ids3)), "\n")
+cat("2 ∩ 3:", length(intersect(ids2, ids3)), "\n")
+cat("1 ∩ 2 ∩ 3:", length(Reduce(intersect, list(ids1, ids2, ids3))), "\n\n")
+
+# Unique to each
+cat("Unique IDs per set:\n")
+cat("Only in subsampled1:", length(setdiff(ids1, union(ids2, ids3))), "\n")
+cat("Only in subsampled2:", length(setdiff(ids2, union(ids1, ids3))), "\n")
+cat("Only in subsampled3:", length(setdiff(ids3, union(ids1, ids2))), "\n")
+
+```
+## Venn diagram of subsamples
+```{r}
+library(ggplot2)
+
+base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/"
+f1 <- file.path(base_dir, "subsampled1", "subsampled1.tsv")
+f2 <- file.path(base_dir, "subsampled2", "subsampled2.tsv")
+f3 <- file.path(base_dir, "subsampled3", "subsampled3.tsv")
+
+sub1 <- read.delim(f1, sep = "\t", stringsAsFactors = FALSE)
+sub2 <- read.delim(f2, sep = "\t", stringsAsFactors = FALSE)
+sub3 <- read.delim(f3, sep = "\t", stringsAsFactors = FALSE)
+
+ids1 <- unique(sub1$Isolate_Id)
+ids2 <- unique(sub2$Isolate_Id)
+ids3 <- unique(sub3$Isolate_Id)
+
+i12  <- intersect(ids1, ids2)
+i13  <- intersect(ids1, ids3)
+i23  <- intersect(ids2, ids3)
+i123 <- Reduce(intersect, list(ids1, ids2, ids3))
+
+only1 <- setdiff(ids1, union(ids2, ids3))
+only2 <- setdiff(ids2, union(ids1, ids3))
+only3 <- setdiff(ids3, union(ids1, ids2))
+only12 <- setdiff(i12,  ids3)
+only13 <- setdiff(i13,  ids2)
+only23 <- setdiff(i23,  ids1)
+
+n1   <- length(only1)
+n2   <- length(only2)
+n3   <- length(only3)
+n12  <- length(only12)
+n13  <- length(only13)
+n23  <- length(only23)
+n123 <- length(i123)
+
+circle_df <- function(cx, cy, r = 1.5, n = 400, id = "A") {
+  t <- seq(0, 2*pi, length.out = n)
+  data.frame(
+    x = cx + r*cos(t),
+    y = cy + r*sin(t),
+    set = id
+  )
+}
+
+c1 <- c(-1.4,  0.0)  # subsampled1
+c2 <- c( 1.4,  0.0)  # subsampled2
+c3 <- c( 0.0,  1.6)  # subsampled3
+r  <- 1.8
+
+circles <- rbind(
+  circle_df(c1[1], c1[2], r, id = "subsampled1"),
+  circle_df(c2[1], c2[2], r, id = "subsampled2"),
+  circle_df(c3[1], c3[2], r, id = "subsampled3")
+)
+
+# ---- colors (your request) ----
+fill_map <- c(
+  subsampled1 = "#CD5C5C",
+  subsampled2 = "#0072B2",
+  subsampled3 = "#006D2C"
+)
+
+pos_only1 <- c(c1[1] - 0.7, c1[2] - 0.2)
+pos_only2 <- c(c2[1] + 0.7, c2[2] - 0.2)
+pos_only3 <- c(c3[1],       c3[2] + 0.9)
+
+pos_12 <- c(0, -0.5)
+pos_13 <- c(-0.6, 0.8)
+pos_23 <- c(0.6,  0.8)
+pos_123 <- c(0, 0.4)
+
+lab1 <- list(text = "subsampled1", pos = c(c1[1] - 2.6, c1[2] - 0.1), to = c(c1[1] - r*0.9, c1[2]))
+lab2 <- list(text = "subsampled2", pos = c(c2[1] + 2.6, c2[2] - 0.1), to = c(c2[1] + r*0.9, c2[2]))
+lab3 <- list(text = "subsampled3", pos = c(c3[1],       c3[2] + 2.6), to = c(c3[1],       c3[2] + r*0.9))
+
+p <- ggplot() +
+  geom_polygon(
+    data = circles, aes(x = x, y = y, fill = set, group = set),
+    color = "black", linewidth = 0.5, alpha = 0.32
+  ) +
+  scale_fill_manual(
+    values = fill_map,
+    labels = c("subsampled1", "subsampled2", "subsampled3"),
+    name   = "Subsamples"
+  ) +
+  coord_fixed(xlim = c(-5, 5), ylim = c(-3, 5), expand = FALSE) +
+  theme_void(base_size = 16) +
+  theme(
+    legend.position   = "top",
+    legend.direction  = "horizontal",
+    legend.box        = "full",
+    legend.title    = element_text(size = 14, face = "bold"),
+    legend.text     = element_text(size = 13),
+    plot.title      = element_blank()   # remove title
+  )
+
+p <- p +
+  annotate("text", x = pos_only1[1], y = pos_only1[2], label = n1,   size = 6, fontface = "bold") +
+  annotate("text", x = pos_only2[1], y = pos_only2[2], label = n2,   size = 6, fontface = "bold") +
+  annotate("text", x = pos_only3[1], y = pos_only3[2], label = n3,   size = 6, fontface = "bold") +
+  annotate("text", x = pos_12[1],    y = pos_12[2],    label = n12,  size = 6, fontface = "bold") +
+  annotate("text", x = pos_13[1],    y = pos_13[2],    label = n13,  size = 6, fontface = "bold") +
+  annotate("text", x = pos_23[1],    y = pos_23[2],    label = n23,  size = 6, fontface = "bold") +
+  annotate("text", x = pos_123[1],   y = pos_123[2],   label = n123, size = 6, fontface = "bold")
+
+ggsave(file.path(base_dir, "IsolateId_venn_withLegend.png"), p,
+       width = 9, height = 7, dpi = 300, bg = "white")
+ggsave(file.path(base_dir, "IsolateId_venn_withLegend.pdf"), p,
+       width = 9, height = 7, bg = "white")
+
+p
+
+```
+
+
+
+
+### Plotting of all subsamples
+
+```{r}
+runs <- c("subsampled1","subsampled2","subsampled3")
+
+required_seq  <- "final_seq_data.tsv"
+required_case <- "Latest Reported Events.xlsx"
+
+if (!file.exists(required_seq))  stop("Missing final_seq_data.tsv in parent dir")
+if (!file.exists(required_case)) stop("Missing Latest Reported Events.xlsx in parent dir")
+
+base_dir <- getwd()
+
+find_subsample_tsv <- function(d, base_dir){
+  dir_abs <- file.path(base_dir, d)
+  candidates <- c(
+    file.path(dir_abs, paste0(d, ".tsv")),
+    file.path(dir_abs, "subsampled_data.tsv"),
+    file.path(dir_abs, "subsampled.tsv")
+  )
+  hit <- candidates[file.exists(candidates)]
+  if (length(hit) == 0) {
+    stop(paste(
+      "Missing subsampled TSV in", d, "— tried:",
+      paste(basename(candidates), collapse = ", ")
+    ))
+  }
+  hit[[1]]
+}
+
+for (d in runs) {
+  setwd(base_dir)
+
+  dir.create(d, showWarnings = FALSE, recursive = TRUE)
+  
+  file.copy(file.path(base_dir, required_seq),  file.path(base_dir, d, required_seq),  overwrite = TRUE)
+  file.copy(file.path(base_dir, required_case), file.path(base_dir, d, required_case), overwrite = TRUE)
+
+  src_tsv_abs <- find_subsample_tsv(d, base_dir)
+  file.copy(src_tsv_abs, file.path(base_dir, d, "subsampled_data.tsv"), overwrite = TRUE)
+
+  message("Running plots in: ", d)
+
+  setwd(file.path(base_dir, d))
+
+  suppressPackageStartupMessages({
+    library(dplyr); library(lubridate); library(readxl)
+    library(ggplot2); library(patchwork); library(scales)
+  })
+
+  full_raw      <- read.delim("final_seq_data.tsv",  sep = "\t", stringsAsFactors = FALSE)
+  subsample_raw <- read.delim("subsampled_data.tsv", sep = "\t", stringsAsFactors = FALSE)
+  case_raw      <- read_excel("Latest Reported Events.xlsx")
+
+  full_raw <- full_raw %>%
+    mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+           Year = lubridate::year(Collection_Date_Final))
+
+  subsample_raw <- subsample_raw %>%
+    mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+           Year = lubridate::year(Collection_Date_Final))
+
+  case_europe <- case_raw %>%
+    mutate(Year = lubridate::year(as.Date(`observation date`))) %>%
+    group_by(Year) %>%
+    summarise(total_cases = dplyr::n_distinct(`Event ID`), .groups = "drop")
+
+  hab_pal <- c(
+    Coastal="#0072B2", Farm="#CD5C5C", Forest="#BCBD22", Grassland="#26A69A",
+    `Human_Modified`="#56B4E9", Marine="#CC79A7", Shrubland="lightslategray",
+    Urban="#E6842A", Others="#000000", Woodland="#6B4C1B", Rock="#7570B3", Wetland="#006D2C"
+  )
+  clean_hab <- function(df) df %>%
+    mutate(Habitat = trimws(Habitat),
+           Habitat = ifelse(Habitat %in% names(hab_pal), Habitat, "Others"))
+
+  full_hab <- clean_hab(full_raw); sub_hab <- clean_hab(subsample_raw)
+
+  hab_counts_full <- full_hab %>%
+    group_by(Year, Habitat) %>%
+    summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+    left_join(case_europe, by = "Year")
+
+  hab_counts_sub <- sub_hab %>%
+    group_by(Year, Habitat) %>%
+    summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+    left_join(case_europe, by = "Year")
+
+  scale_hab_full <- max(hab_counts_full$n_isolates, na.rm = TRUE) / max(hab_counts_full$total_cases, na.rm = TRUE)
+  scale_hab_sub  <- max(hab_counts_sub$n_isolates,  na.rm = TRUE) / max(hab_counts_sub$total_cases,  na.rm = TRUE)
+
+  plot_hab <- function(df, sf, ttl){
+    ggplot(df, aes(x = Year)) +
+      geom_bar(aes(y = n_isolates, fill = Habitat),
+               stat = "identity", position = "dodge", width = 1.4) +
+      geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+      geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+      geom_text(
+        data = df %>% filter(Year == 2017) %>% slice(1),
+        aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+        colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+      ) +
+      scale_fill_manual(values = hab_pal, drop = FALSE) +
+      scale_x_continuous(breaks = 2016:2025) +
+      scale_y_continuous("Number of Isolates",
+                         sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+      labs(title = ttl, x = "Year") +
+      theme_minimal(base_size = 15) +
+      theme(legend.position = "bottom", legend.direction = "horizontal")
+  }
+
+  p_hab_full <- plot_hab(hab_counts_full, scale_hab_full, "Isolates & Cases by Habitat (Full Data)")
+  p_hab_sub  <- plot_hab(hab_counts_sub,  scale_hab_sub,  "Isolates & Cases by Habitat (Subsample)")
+
+  combined_hab <- (p_hab_full / p_hab_sub) +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
+
+  type_pal <- c(
+    Domestic_Mammal="#6A3D9A", Domestic_Bird="#CD5C5C",
+    Wild_Mammal="#BCBD22", Human="#1B9E77", Wild_Bird="#3C5488", Others="#000000"
+  )
+  clean_type <- function(df) df %>%
+    mutate(Type = trimws(Type),
+           Type = ifelse(Type %in% names(type_pal), Type, "Others"))
+
+  full_type <- clean_type(full_raw); sub_type <- clean_type(subsample_raw)
+
+  type_counts_full <- full_type %>%
+    group_by(Year, Type) %>%
+    summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+    left_join(case_europe, by = "Year")
+
+  type_counts_sub <- sub_type %>%
+    group_by(Year, Type) %>%
+    summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+    left_join(case_europe, by = "Year")
+
+  scale_type_full <- max(type_counts_full$n_isolates, na.rm = TRUE) / max(type_counts_full$total_cases, na.rm = TRUE)
+  scale_type_sub  <- max(type_counts_sub$n_isolates,  na.rm = TRUE) / max(type_counts_sub$total_cases,  na.rm = TRUE)
+
+  plot_type <- function(df, sf, ttl){
+    ggplot(df, aes(x = Year)) +
+      geom_bar(aes(y = n_isolates, fill = Type),
+               stat = "identity", position = "dodge", width = 1.4) +
+      geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+      geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+      geom_text(
+        data = df %>% filter(Year == 2017) %>% slice(1),
+        aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+        colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+      ) +
+      scale_fill_manual(values = type_pal, name = "Host", drop = FALSE) +
+      scale_x_continuous(breaks = 2016:2025) +
+      scale_y_continuous("Number of Isolates",
+                         sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+      labs(title = ttl, x = "Year") +
+      theme_minimal(base_size = 15) +
+      theme(legend.position = "bottom", legend.direction = "horizontal")
+  }
+
+  p_type_full <- plot_type(type_counts_full, scale_type_full, "(A) Isolates & Cases by Host Type (Full Data)")
+  p_type_sub  <- plot_type(type_counts_sub,  scale_type_sub,  "(B) Isolates & Cases by Host Type (Subsample)")
+
+  combined_type <- (p_type_full / p_type_sub) +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
+
+  geo_pal <- c(
+    GeoCluster_One="#4DBBD5", GeoCluster_Two="#F39B7F",
+    GeoCluster_Three="#3C5488", GeoCluster_Four="#BCBD22", GeoCluster_Five="#1B9E77"
+  )
+  clean_geo <- function(df) df %>%
+    mutate(GeoCluster = trimws(GeoCluster),
+           GeoCluster = ifelse(GeoCluster %in% names(geo_pal), GeoCluster, "Others"),
+           GeoCluster = factor(
+             GeoCluster,
+             levels = c("GeoCluster_One","GeoCluster_Two","GeoCluster_Three","GeoCluster_Four","GeoCluster_Five","Others")
+           )
+           )
+
+  full_geo <- clean_geo(full_raw); sub_geo <- clean_geo(subsample_raw)
+
+  geo_counts_full <- full_geo %>%
+    group_by(Year, GeoCluster) %>%
+    summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+    left_join(case_europe, by = "Year")
+
+  geo_counts_sub <- sub_geo %>%
+    group_by(Year, GeoCluster) %>%
+    summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+    left_join(case_europe, by = "Year")
+
+  scale_geo_full <- max(geo_counts_full$n_isolates, na.rm = TRUE) / max(geo_counts_full$total_cases, na.rm = TRUE)
+  scale_geo_sub  <- max(geo_counts_sub$n_isolates,  na.rm = TRUE) / max(geo_counts_sub$total_cases,  na.rm = TRUE)
+
+  plot_geo <- function(df, sf, ttl){
+    ggplot(df, aes(x = Year)) +
+      geom_bar(aes(y = n_isolates, fill = GeoCluster),
+               stat = "identity", position = "dodge", width = 1.4) +
+      geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+      geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+      geom_text(
+        data = df %>% filter(Year == 2017) %>% slice(1),
+        aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+        colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+      ) +
+      scale_fill_manual(values = geo_pal, name = "GeoCluster", drop = FALSE,
+                              labels = c("GeoCluster One","GeoCluster Two","GeoCluster Three",
+                 "GeoCluster Four","GeoCluster Five","Others")) +
+      scale_x_continuous(breaks = 2016:2025) +
+      scale_y_continuous("Number of Isolates",
+                         sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+      labs(title = ttl, x = "Year") +
+      theme_minimal(base_size = 15) +
+      theme(legend.position = "bottom", legend.direction = "horizontal")
+  }
+
+  p_geo_full <- plot_geo(geo_counts_full, scale_geo_full, "Isolates & Cases by GeoCluster (Full Data)")
+  p_geo_sub  <- plot_geo(geo_counts_sub,  scale_geo_sub,  "Isolates & Cases by GeoCluster (Subsample)")
+
+  combined_geo <- (p_geo_full / p_geo_sub) +
+    plot_layout(guides = "collect") &
+    theme(legend.position = "bottom")
+
+  suffix_num <- gsub("\\D", "", basename(getwd()))
+
+  ggsave(paste0("Habitat_subsampling", suffix_num, ".png"),
+         combined_hab,  width = 14, height = 9, dpi = 300, bg = "transparent")
+  ggsave(paste0("Habitat_subsampling", suffix_num, ".pdf"),
+         combined_hab,  width = 14, height = 9)
+
+  ggsave(paste0("Host_subsampling",   suffix_num, ".png"),
+         combined_type, width = 14, height = 9, dpi = 300)
+  ggsave(paste0("Host_subsampling",   suffix_num, ".pdf"),
+         combined_type, width = 14, height = 9)
+
+  ggsave(paste0("GeoClusters_subsampling", suffix_num, ".png"),
+         combined_geo, width = 14, height = 9, dpi = 300)
+  ggsave(paste0("GeoClusters_subsampling", suffix_num, ".pdf"),
+         combined_geo, width = 14, height = 9)
+  # =============== END: PLOTTING PIPELINE ===================================
+
+  setwd(base_dir)
+}
+
+```
+## Writing a fasta file
+```{r}
+
+base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/"
+
+runs <- c("subsampled1","subsampled2","subsampled3")
+
+for (d in runs) {
+  tsv_file <- file.path(base_dir, d, paste0(d, ".tsv"))
+  if (!file.exists(tsv_file)) stop("Missing TSV file: ", tsv_file)
+
+  subsampled_data <- read.delim(tsv_file, sep = "\t", stringsAsFactors = FALSE)
+
+  fasta_file <- file.path(base_dir, d, paste0(d, ".fasta"))
+
+  fileConn <- file(fasta_file, "w")
+
+  apply(subsampled_data, 1, function(row) {
+    header <- paste0(
+      ">", row["Isolate_Id"], "|",
+      row["Isolate_Name"], "|",
+      row["Habitat"], "|",
+      row["Type"], "|",
+      row["Country"], "|",
+      row["GeoCluster"], "|",
+      row["Collection_Date_Final"]
+    )
+    writeLines(header, fileConn)
+    writeLines(row["Sequence"], fileConn)
+  })
+
+  close(fileConn)
+
+  cat("FASTA file saved as", fasta_file, "\n")
+}
+
+```
+
+
