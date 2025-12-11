@@ -22,23 +22,3 @@ Highly pathogenic avian influenza (HPAI) H5Nx clade 2.3.4.4b has been circulatin
 </small>
 
 ---
-
-## Repository overview
-
-This repository contains code, configuration files and processed data needed to reproduce the analyses in:
-
-> **“Ecological and Evolutionary Drivers of 2.3.4.4b H5Nx HPAI Spread Across Species and Geographic Regions in Europe.”**
-
-Top-level layout:
-
-```text
-.
-├── Ecological-and-Evolutionary-Drivers-of-2.3.4.4b-H5Nx-HPAI-Spread-in-Europe.Rproj
-├── Phylodynamics
-│   ├── Discrete Trait Analysis
-│   ├── Empirical Trees
-│   └── Generalized Linear Modeling
-├── Pipelines
-│   ├── Pipeline.Rmd
-│   └── Stratified_Subsampling.Rmd
-└── README.md
