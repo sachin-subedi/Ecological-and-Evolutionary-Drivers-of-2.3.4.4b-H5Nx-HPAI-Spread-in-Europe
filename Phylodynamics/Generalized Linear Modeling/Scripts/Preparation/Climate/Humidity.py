@@ -1,0 +1,130 @@
+## Relative Humidity
+import xarray as xr
+import rioxarray
+import geopandas as gpd
+import regionmask
+import pandas as pd
+
+import xarray as xr
+
+ds = xr.open_dataset(
+    "hu_ens_mean_0.1deg_reg_2011-2024_v31.0e.nc",
+    engine="netcdf4",
+    chunks={"time": 365}
+)
+
+ds = ds.rio.write_crs(4326)
+hu = ds["hu"]
+print(ds)
+
+ISO38 = [
+    "ALB","AUT","BEL","BIH","BGR","CHE","CYP","CZE","DEU","DNK","ESP","EST",
+    "FIN","FRA","GBR","GRC","HRV","HUN","IRL","ISL","ITA","XKX","LTU","LUX",
+    "LVA","MDA","MKD","MNE","NLD","NOR","POL","PRT","ROU","SRB","SVK","SVN",
+    "SWE","UKR","BLR"
+]
+
+cluster_map = {
+    "One":   ["ALB", "BGR", "CYP", "GRC", "XKX", "MKD", "SRB", "ROU"],
+    "Two":   ["HUN", "SVK", "POL", "UKR", "MDA", "BLR"],
+    "Three": ["DNK", "FRA", "BEL", "DEU", "ISL", "IRL", "LUX", "NLD", "PRT", "ESP", "CHE", "GBR"],
+    "Four":  ["EST", "FIN", "LVA", "LTU", "NOR", "SWE"],
+    "Five":  ["AUT", "MNE", "BIH", "HRV", "CZE", "ITA", "SVN"]
+}
+iso_to_cluster = {iso: cluster for cluster, members in cluster_map.items() for iso in members}
+
+SHAPEFILE = "/home/ss11645/Landcover/shapes/ne_110m_admin_0_countries.shp"
+
+gdf_country = (
+    gpd.read_file(SHAPEFILE)
+    .loc[lambda d: d["ISO_A3"].isin(ISO38)]
+    .assign(GeoCluster=lambda d: d["ISO_A3"].map(iso_to_cluster))
+    .dropna(subset=["GeoCluster"])
+)
+
+country_cluster_lookup = gdf_country[["SOVEREIGNT", "ISO_A3", "GeoCluster"]].drop_duplicates()
+
+gdf = gdf_country.dissolve(by="GeoCluster").reset_index()
+
+regions = regionmask.Regions(
+    outlines=gdf.geometry.values,
+    names=gdf.GeoCluster.values,
+    numbers=range(len(gdf))
+)
+
+mask2d = regions.mask(lon_or_obj=hu["longitude"], lat=hu["latitude"])
+
+cluster_means = (
+    xr.concat(
+        [hu.where(mask2d == i).mean(dim=("latitude", "longitude")) for i in range(len(gdf))],
+        dim="GeoCluster"
+    )
+    .assign_coords(GeoCluster=gdf.GeoCluster.values)
+)
+
+out_df = cluster_means.to_dataframe(name="hu_hg").reset_index()
+
+out_with_country = country_cluster_lookup.merge(out_df, on="GeoCluster", how="left")
+
+out_with_country.to_csv("GeoCluster_humidity_with_countries.tsv", sep="\t", index=False)
+
+df_daily = (
+    out_with_country
+    .rename(columns={"SOVEREIGNT": "Country", "hu_hg": "humidity"})
+    .loc[:, ["Country", "GeoCluster", "time", "humidity"]]
+)
+
+df_daily["time"] = pd.to_datetime(df_daily["time"])
+df_daily = df_daily[
+    (df_daily["time"] >= "2016-01-01") &
+    (df_daily["time"] <= "2025-05-01")
+]
+df_daily["year"] = df_daily["time"].dt.year
+df_daily["month"] = df_daily["time"].dt.month
+
+monthly_country = (
+    df_daily
+    .groupby(["Country", "GeoCluster", "year", "month"], as_index=False)
+    .agg(humidity=("humidity", "mean"))
+)
+
+avg_country = (
+    monthly_country
+    .groupby(["Country", "GeoCluster"], as_index=False)
+    .agg(humidity=("humidity", "mean"))
+)
+
+
+season_country = (
+    monthly_country
+    .groupby(["Country", "GeoCluster", "year"])
+    .agg(humidity_sd=("humidity", "std"))
+    .groupby(["Country", "GeoCluster"], as_index=False)
+    .agg(humidity_seasonality=("humidity_sd", "mean"))
+)
+
+avg_geo = (
+    avg_country
+    .groupby("GeoCluster", as_index=False)
+    .agg(humidity=("humidity", "mean"))
+)
+
+print("Country-level humidity mean:")
+print(avg_country.head(3))
+
+print("\nCountry-level humidity seasonality:")
+print(season_country.head(3))
+
+print("\nGeoCluster-level humidity mean:")
+print(avg_geo)
+
+geo_out = avg_geo.copy()
+geo_out["GeoCluster"] = "GeoCluster_" + geo_out["GeoCluster"].astype(str)
+
+geo_out[["GeoCluster", "humidity"]].to_csv(
+    "GeoCluster_humidity.tsv",
+    sep="\t",
+    index=False
+)
+
+print(geo_out)
