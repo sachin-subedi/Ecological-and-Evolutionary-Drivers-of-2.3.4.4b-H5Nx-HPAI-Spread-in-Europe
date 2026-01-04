@@ -7,11 +7,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import matplotlib as mpl
 import baltic as bt
-
-mpl.rcParams["font.family"] = "sans-serif"
-mpl.rcParams["font.sans-serif"] = ["Arial"]
 
 ANCHOR_DEC_YEAR  = 2025.2520547945205
 
@@ -58,6 +54,7 @@ def make_geocluster_reward_plot(trees_file, out_png):
             if not ln.lower().startswith("tree state_"):
                 continue
             tree_counter += 1
+
             try:
                 newick = ln.split("= [&R] ")[1]
                 tree   = bt.loadNewick(StringIO(newick), absoluteTime=False)
@@ -66,8 +63,8 @@ def make_geocluster_reward_plot(trees_file, out_png):
                 print(f"Skipped tree {tree_counter} (parse error: {e})")
                 continue
 
-            month_cluster_raw = {}
-            month_totals_raw  = {}
+            month_cluster_raw = {}   # raw reward per (month, cluster)
+            month_totals_raw  = {}   # total reward per month  (denominator)
 
             for node in tree.Objects:
                 if not node.traits:
@@ -76,6 +73,7 @@ def make_geocluster_reward_plot(trees_file, out_png):
                 month = decyear_to_month(node.absoluteTime)
                 all_months_set.add(month)
 
+                # gather this node’s GeoCluster rewards
                 node_rewards = {}
                 for cl in GEOCLUSTERS:
                     key = f"{cl}_reward"
@@ -85,12 +83,14 @@ def make_geocluster_reward_plot(trees_file, out_png):
                     node_rewards[cl] = float(val)
                     pair_key = (month, cl)
                     month_cluster_raw[pair_key] = month_cluster_raw.get(pair_key, 0.0) + float(val)
+
+                # denominator: use GeoCluster.count if >0, else sum of cluster rewards
                 node_total = float(node.traits.get("GeoCluster.count", 0.0))
                 if node_total == 0:
                     node_total = sum(node_rewards.values())
 
                 month_totals_raw[month] = month_totals_raw.get(month, 0.0) + node_total
-    
+                
             for (month, cl), raw_val in month_cluster_raw.items():
                 total = month_totals_raw.get(month, 0.0)
                 if total == 0:
@@ -112,7 +112,8 @@ def make_geocluster_reward_plot(trees_file, out_png):
     mean_df = pd.DataFrame(mean_rows)
     full_months = sorted(all_months_set)
     full_index  = pd.MultiIndex.from_product(
-                     [full_months, GEOCLUSTERS], names=["year_month", "cluster"])
+        [full_months, GEOCLUSTERS], names=["year_month", "cluster"]
+    )
     mean_df = (
         mean_df
         .set_index(["year_month", "cluster"])
@@ -122,28 +123,28 @@ def make_geocluster_reward_plot(trees_file, out_png):
 
     plot_df = (
         mean_df
-        .pivot_table(
-            index="year_month",
-            columns="cluster",
-            values="prop",
-            fill_value=0
-        )
+        .pivot_table(index="year_month", columns="cluster", values="prop", fill_value=0)
         .sort_index()
     )
 
+    # (i) drop months where every cluster is zero
     plot_df = plot_df.loc[(plot_df != 0).any(axis=1)]
 
+    # (ii) renormalise so each row sums to 1
     row_sums = plot_df.sum(axis=1)
     plot_df  = plot_df.div(row_sums, axis=0).fillna(0)
 
+    # (iii) datetime index
     plot_df.index = pd.to_datetime(plot_df.index + "-01")
+
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
     plot_df[GEOCLUSTERS].plot.area(
         ax=ax,
         linewidth=0,
-        color=[lighten_color(GEOCLUSTER_COLORS[c], amount=0.25) for c in GEOCLUSTERS]
+        color=[lighten_color(GEOCLUSTER_COLORS[c], amount=0.25) for c in GEOCLUSTERS],
+        legend=False
     )
 
     ax.set_facecolor("white")
@@ -158,35 +159,19 @@ def make_geocluster_reward_plot(trees_file, out_png):
     year_ticks = pd.date_range(plot_df.index.min(), plot_df.index.max(), freq="YS")
     ax.set_xticks(year_ticks)
     ax.set_xticklabels([d.year for d in year_ticks], fontsize=18)
-    ax.set_xlabel("", fontsize=18)
+    ax.set_xlabel("")
     ax.set_ylabel("Reward proportion", fontsize=18)
     ax.tick_params(axis="y", labelsize=18)
 
-    legend_labels = [
-        "GeoCluster One",
-        "GeoCluster Two",
-        "GeoCluster Three",
-        "GeoCluster Four",
-        "GeoCluster Five",
-    ]
-
-    fig.subplots_adjust(top=0.80, bottom=0.12, left=0.10, right=0.98)
-
-    handles, _ = ax.get_legend_handles_labels()
-    ax.legend().remove()
-
-    fig.legend(
-        handles,
-        legend_labels,
-        loc="upper center",
-        ncol=3,
-        frameon=False,
-        fontsize=12
-    )
+    # extra safety: remove any legend if created
+    leg = ax.get_legend()
+    if leg is not None:
+        leg.remove()
 
     fig.savefig(out_png, dpi=600, bbox_inches="tight")
     print(f"✓ saved plot to {out_png}")
     plt.close(fig)
+
 
 if __name__ == "__main__":
     subsamples = [

@@ -4,7 +4,6 @@ library(tidyr)
 library(lubridate)
 library(scales)
 library(patchwork)
-library(grid)
 
 setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/GeoCluster")
 options(scipen = 999)
@@ -14,7 +13,6 @@ jump_files <- c(
   "GeoCluster_Subsample2_jumpTimes.txt",
   "GeoCluster_Subsample3_jumpTimes.txt"
 )
-
 sub_labels <- c("Subsample1", "Subsample2", "Subsample3")
 
 valid_states <- c(
@@ -25,6 +23,14 @@ valid_states <- c(
   "GeoCluster_Five"
 )
 
+LABEL_MAP <- c(
+  "GeoCluster_One"   = "South-Eastern",
+  "GeoCluster_Two"   = "Central-Eastern",
+  "GeoCluster_Three" = "Central-Western",
+  "GeoCluster_Four"  = "Northern",
+  "GeoCluster_Five"  = "Central-Southern"
+)
+
 src_cols <- list(
   "GeoCluster_One"   = c(scales::alpha("#4DBBD5", 0.25), "#4DBBD5"),
   "GeoCluster_Two"   = c(scales::alpha("#F39B7F", 0.25), "#F39B7F"),
@@ -33,47 +39,52 @@ src_cols <- list(
   "GeoCluster_Five"  = c(scales::alpha("#1B9E77", 0.25), "#1B9E77")
 )
 
-strip_cols <- vapply(src_cols, function(x) x[2], character(1))
+strip_cols <- c(
+  "GeoCluster_One"   = "#4DBBD5",
+  "GeoCluster_Two"   = "#F39B7F",
+  "GeoCluster_Three" = "#3C5488",
+  "GeoCluster_Four"  = "#BCBD22",
+  "GeoCluster_Five"  = "#1B9E77"
+)
 
 year_levels   <- as.character(2016:2025)
 LEG_BARWIDTH  <- unit(80, "pt")
 LEG_BARHEIGHT <- unit(6,  "pt")
 
-# Base theme
-panel_theme <- theme_minimal(base_size = 18) +
+panel_theme <- theme_minimal(base_size = 16) +
   theme(
     panel.spacing.y    = unit(0, "lines"),
     strip.placement    = "outside",
     strip.text.y.left  = element_text(face = "bold", hjust = 1, size = 22),
     strip.background.y = element_blank(),
-    axis.text.y        = element_text(size = 20),
+    axis.text.y        = element_text(size = 16),
     panel.grid         = element_blank(),
     plot.margin        = margin(0, 0, 0, 0)
   )
 
-make_source_plot <- function(GeoCluster_ave_complete, source_key, global_max,
+make_source_plot <- function(geo_ave_complete, source_key, global_max,
                              show_xaxis = FALSE, show_labels = FALSE) {
   
-  df <- GeoCluster_ave_complete %>%
+  df <- geo_ave_complete %>%
     filter(Source == source_key) %>%
     mutate(
       Sink_lab = factor(
         Sink_lab,
-        levels = gsub("_", " ", valid_states),
+        levels  = unname(LABEL_MAP[valid_states]),
         ordered = TRUE
       )
     )
   
-  strip_col <- strip_cols[[source_key]]
+  strip_col <- strip_cols[[as.character(source_key)]]
   
   ggplot(df, aes(x = factor(year), y = Sink_lab, fill = ave)) +
-    geom_tile(color = "black", linewidth = 0.6) +
+    geom_tile(color = "black", linewidth = 0.4) +
     facet_grid(Source_lab ~ ., switch = "y", scales = "free_y", space = "free_y") +
     scale_x_discrete(drop = FALSE, limits = year_levels) +
     scale_fill_gradient(
-      name   = if (source_key == "GeoCluster_Three") "Avg. Jumps per Year" else NULL,
-      low    = src_cols[[source_key]][1],
-      high   = src_cols[[source_key]][2],
+      name   = if (source_key == valid_states[1]) "Avg. Jumps per Year" else NULL,
+      low    = src_cols[[as.character(source_key)]][1],
+      high   = src_cols[[as.character(source_key)]][2],
       limits = c(0, global_max),
       guide  = guide_colorbar(
         direction      = "horizontal",
@@ -87,13 +98,12 @@ make_source_plot <- function(GeoCluster_ave_complete, source_key, global_max,
     labs(x = if (show_xaxis) "" else NULL, y = NULL) +
     panel_theme +
     theme(
-      axis.text.x       = if (show_xaxis) element_text(size = 20) else element_blank(),
+      axis.text.x       = if (show_xaxis) element_text(size = 16) else element_blank(),
       axis.ticks.x      = element_blank(),
-      strip.text.y.left = element_text(face = "bold", size = 22, colour = strip_col)
+      strip.text.y.left = element_text(face = "bold", size = 18, colour = strip_col)
     )
 }
-
-out_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/GeoCluster"
+out_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/GeoCluster/Regions"
 
 for (i in seq_along(jump_files)) {
   in_file <- jump_files[i]
@@ -111,7 +121,7 @@ for (i in seq_along(jump_files)) {
     )
   
   state <- n_distinct(jumps$state)
-
+  
   count_total <- jumps %>%
     group_by(year, from_to) %>%
     count(name = "n") %>%
@@ -120,10 +130,10 @@ for (i in seq_along(jump_files)) {
   count_total <- count_total %>%
     filter(From %in% valid_states, To %in% valid_states)
   
-  GeoCluster_ave <- count_total %>%
+  geo_ave <- count_total %>%
     mutate(ave = n / state)
   
-  GeoCluster_ave_filtered <- GeoCluster_ave %>%
+  geo_ave_filtered <- geo_ave %>%
     rename(Source = From, Sink = To) %>%
     filter(as.numeric(year) >= 2016, as.numeric(year) <= 2025) %>%
     mutate(year = as.integer(year))
@@ -134,23 +144,41 @@ for (i in seq_along(jump_files)) {
     year   = 2016:2025
   ) %>% filter(Source != Sink)
   
-  GeoCluster_ave_complete <- full_grid %>%
-    left_join(GeoCluster_ave_filtered, by = c("Source", "Sink", "year")) %>%
+  geo_ave_complete <- full_grid %>%
+    left_join(geo_ave_filtered, by = c("Source", "Sink", "year")) %>%
     mutate(
-      ave        = replace_na(ave, 0),
-      Source     = factor(Source, levels = valid_states, ordered = TRUE),
-      Sink       = factor(Sink,   levels = valid_states, ordered = TRUE),
-      Source_lab = gsub("_", " ", Source),
-      Sink_lab   = gsub("_", " ", Sink)
+      ave    = replace_na(ave, 0),
+      Source = factor(Source, levels = valid_states, ordered = TRUE),
+      Sink   = factor(Sink,   levels = valid_states, ordered = TRUE),
+      Source_lab = factor(
+        unname(LABEL_MAP[as.character(Source)]),
+        levels  = unname(LABEL_MAP[valid_states]),
+        ordered = TRUE
+      ),
+      Sink_lab = factor(
+        unname(LABEL_MAP[as.character(Sink)]),
+        levels  = unname(LABEL_MAP[valid_states]),
+        ordered = TRUE
+      )
     )
   
-  global_max <- max(GeoCluster_ave_complete$ave, na.rm = TRUE)
+  csv_file <- file.path(out_dir, paste0("GeoCluster_AvgJumpsPerYear_", tag, ".csv"))
   
-  order_sources <- c("GeoCluster_Three", "GeoCluster_Five")
+  geo_ave_complete %>%
+    arrange(Source, Sink, year) %>%
+    mutate(
+      Source = as.character(Source),
+      Sink   = as.character(Sink)
+    ) %>%
+    write.csv(csv_file, row.names = FALSE)
+  
+  global_max <- max(geo_ave_complete$ave, na.rm = TRUE)
+  
+  order_sources <- levels(geo_ave_complete$Source)
   
   plots <- Map(
     function(h, idx) make_source_plot(
-      GeoCluster_ave_complete,
+      geo_ave_complete,
       source_key  = h,
       global_max  = global_max,
       show_xaxis  = idx == length(order_sources),
@@ -160,7 +188,7 @@ for (i in seq_along(jump_files)) {
     seq_along(order_sources)
   )
   
-  final_plot_GeoCluster <- wrap_plots(plots, ncol = 1, heights = rep(1, length(plots))) +
+  final_plot_geo <- wrap_plots(plots, ncol = 1, heights = rep(1, length(plots))) +
     plot_layout(guides = "collect") &
     theme(
       legend.position      = "bottom",
@@ -171,31 +199,31 @@ for (i in seq_along(jump_files)) {
       legend.spacing.y     = unit(1, "pt"),
       legend.margin        = margin(0, 0, 0, 0),
       legend.background    = element_rect(fill = "white", colour = NA),
-      legend.title         = element_text(size = 16, face = "bold", hjust = 0.5),
-      legend.text          = element_text(size = 14),
+      legend.title         = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.text          = element_text(size = 12),
       plot.margin          = margin(0, 0, 0, 0)
     )
   
-  print(final_plot_GeoCluster)
+  print(final_plot_geo)
   
-  png_file <- file.path(out_dir, paste0("GeoCluster_ThreeFive_Transitions_tp_", tag, ".png"))
-  pdf_file <- file.path(out_dir, paste0("GeoCluster_ThreeFive_Transitions_tp_", tag, ".pdf"))
+  png_file <- file.path(out_dir, paste0("Full_Region_Transitions_tp_", tag, ".png"))
+  pdf_file <- file.path(out_dir, paste0("Full_Region_Transitions_tp_", tag, ".pdf"))
   
   ggsave(
     png_file,
-    final_plot_GeoCluster,
+    final_plot_geo,
     bg     = "transparent",
-    width  = 12,
-    height = 12,
+    width  = 8,
+    height = 14,
     dpi    = 600,
     units  = "in"
   )
   
   ggsave(
     pdf_file,
-    final_plot_GeoCluster,
-    width       = 12,
-    height      = 12,
+    final_plot_geo,
+    width       = 8,
+    height      = 14,
     units       = "in",
     useDingbats = FALSE
   )

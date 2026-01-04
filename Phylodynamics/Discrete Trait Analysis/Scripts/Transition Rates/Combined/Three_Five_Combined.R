@@ -6,7 +6,7 @@ library(ggnewscale)
 library(scales)
 library(grid)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined")
+setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined_200m/")
 
 input_files <- c(
   "HG_bf_Subsample1.csv",
@@ -19,9 +19,24 @@ suffixes_keep <- c(3, 5)
 
 hab_codes <- c("Coastal", "Wetland", "Farm", "Grassland", "Forest")
 
+suffix_short <- c("3" = "CW", "5" = "CS")
+
 rename_labels <- function(x) {
   x_chr <- as.character(x)
+  
   x_chr[grepl("^GAP", x_chr) | is.na(x_chr)] <- ""
+  
+  idx <- x_chr != "" & !grepl("^GAP", x_chr)
+  
+  if (any(idx)) {
+    suf <- sub(".*?(\\d)$", "\\1", x_chr[idx])        # last digit
+    hab <- sub("\\d$", "", x_chr[idx])                # remove last digit
+    ab  <- unname(suffix_short[suf])                  # CW/CS
+    
+    ok <- !is.na(ab)
+    x_chr[idx][ok] <- paste0(hab[ok], "-", ab[ok])
+  }
+  
   x_chr
 }
 
@@ -92,16 +107,16 @@ for (k in seq_along(input_files)) {
         TRUE ~ NA_character_
       ),
       BF_star = dplyr::case_when(
-        BF_cat == "10–30 (strong)"          ~ "*",
-        BF_cat == "30–100 (very strong)"    ~ "**",
-        BF_cat == ">100 (decisive)"         ~ "***",
+        BF_cat == "10–30 (strong)"       ~ "*",
+        BF_cat == "30–100 (very strong)" ~ "**",
+        BF_cat == ">100 (decisive)"      ~ "***",
         TRUE ~ ""
       )
     )
-
+  
   nodes <- unlist(
     lapply(suffixes_keep, function(s) {
-      group <- paste0(hab_codes, s)
+      group <- paste0(hab_codes, s) 
       if (s < max(suffixes_keep)) c(group, paste0("GAP", s)) else group
     })
   )
@@ -157,14 +172,14 @@ for (k in seq_along(input_files)) {
         linewidth = 0.5
       ) +
       scale_fill_gradient(
-        name   = if (s == as.character(suffixes_keep[1])) "Transition rate" else NULL,
-        low    = suffix_cols[[s]][1],
-        high   = suffix_cols[[s]][2],
-        limits = c(0, global_max),
-        breaks = c(0, 1, 2, 3),
+        name     = if (s == as.character(suffixes_keep[1])) "Transition rate" else NULL,
+        low      = suffix_cols[[s]][1],
+        high     = suffix_cols[[s]][2],
+        limits   = c(0, global_max),
+        breaks   = c(0, 1, 2, 3),
         na.value = "white",
-        guide  = guide_colorbar(
-          order         = ord,
+        guide    = guide_colorbar(
+          order          = ord,
           direction      = "horizontal",
           title.position = "top",
           barwidth       = LEG_BARWIDTH,
@@ -201,12 +216,8 @@ for (k in seq_along(input_files)) {
     To     = factor(levels(df$To)[1],   levels = levels(df$To)),
     From   = factor(levels(df$From)[1], levels = levels(df$From)),
     BF_cat = factor(
-      c("10–30 (strong)",
-        "30–100 (very strong)",
-        ">100 (decisive)"),
-      levels = c("10–30 (strong)",
-                 "30–100 (very strong)",
-                 ">100 (decisive)")
+      c("10–30 (strong)", "30–100 (very strong)", ">100 (decisive)"),
+      levels = c("10–30 (strong)", "30–100 (very strong)", ">100 (decisive)")
     )
   )
   
@@ -228,27 +239,21 @@ for (k in seq_along(input_files)) {
         direction      = "vertical",
         nrow           = 3,
         byrow          = TRUE,
-        override.aes   = list(
-          alpha = 1,
-          label = c("*", "**", "***")
-        )
+        override.aes   = list(alpha = 1, label = c("*", "**", "***"))
       )
     )
-
+  
   print(p)
   
-  out_file <- paste0(
-    "GeoCluster3and5_HG_Rates_heatmap_",
-    tag, ".png"
-  )
+  out_file <- paste0("Regions_3and5_HG_Rates_heatmap_", tag, ".png")
   
   ggsave(
     filename = out_file,
-    plot = p,
-    width = 11,
-    height = 10,
-    bg = "white",
-    dpi = 300
+    plot     = p,
+    width    = 11,
+    height   = 10,
+    bg       = "white",
+    dpi      = 300
   )
 }
 

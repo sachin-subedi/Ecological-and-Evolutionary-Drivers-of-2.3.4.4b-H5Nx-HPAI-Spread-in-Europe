@@ -240,6 +240,15 @@ p
 ### Plotting of all subsamples
 
 ```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(scales)
+library(patchwork)
+library(readxl)
+
+# setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/")
 runs <- c("subsampled1","subsampled2","subsampled3")
 
 required_seq  <- "final_seq_data.tsv"
@@ -268,10 +277,10 @@ find_subsample_tsv <- function(d, base_dir){
 }
 
 for (d in runs) {
-  setwd(base_dir)
 
+  setwd(base_dir)
   dir.create(d, showWarnings = FALSE, recursive = TRUE)
-  
+
   file.copy(file.path(base_dir, required_seq),  file.path(base_dir, d, required_seq),  overwrite = TRUE)
   file.copy(file.path(base_dir, required_case), file.path(base_dir, d, required_case), overwrite = TRUE)
 
@@ -279,18 +288,14 @@ for (d in runs) {
   file.copy(src_tsv_abs, file.path(base_dir, d, "subsampled_data.tsv"), overwrite = TRUE)
 
   message("Running plots in: ", d)
-
   setwd(file.path(base_dir, d))
 
-  suppressPackageStartupMessages({
-    library(dplyr); library(lubridate); library(readxl)
-    library(ggplot2); library(patchwork); library(scales)
-  })
-
+  # ---- Read inputs ----------------------------------------------------------
   full_raw      <- read.delim("final_seq_data.tsv",  sep = "\t", stringsAsFactors = FALSE)
   subsample_raw <- read.delim("subsampled_data.tsv", sep = "\t", stringsAsFactors = FALSE)
   case_raw      <- read_excel("Latest Reported Events.xlsx")
 
+  # ---- Use Collection_Date_Final and derive Year ----------------------------
   full_raw <- full_raw %>%
     mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
            Year = lubridate::year(Collection_Date_Final))
@@ -299,21 +304,24 @@ for (d in runs) {
     mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
            Year = lubridate::year(Collection_Date_Final))
 
+  # ---- Cases per year -------------------------------------------------------
   case_europe <- case_raw %>%
     mutate(Year = lubridate::year(as.Date(`observation date`))) %>%
     group_by(Year) %>%
     summarise(total_cases = dplyr::n_distinct(`Event ID`), .groups = "drop")
 
-  hab_pal <- c(
+    hab_pal <- c(
     Coastal="#0072B2", Farm="#CD5C5C", Forest="#BCBD22", Grassland="#26A69A",
     `Human_Modified`="#56B4E9", Marine="#CC79A7", Shrubland="lightslategray",
     Urban="#E6842A", Others="#000000", Woodland="#6B4C1B", Rock="#7570B3", Wetland="#006D2C"
   )
+
   clean_hab <- function(df) df %>%
     mutate(Habitat = trimws(Habitat),
            Habitat = ifelse(Habitat %in% names(hab_pal), Habitat, "Others"))
 
-  full_hab <- clean_hab(full_raw); sub_hab <- clean_hab(subsample_raw)
+  full_hab <- clean_hab(full_raw)
+  sub_hab  <- clean_hab(subsample_raw)
 
   hab_counts_full <- full_hab %>%
     group_by(Year, Habitat) %>%
@@ -359,11 +367,13 @@ for (d in runs) {
     Domestic_Mammal="#6A3D9A", Domestic_Bird="#CD5C5C",
     Wild_Mammal="#BCBD22", Human="#1B9E77", Wild_Bird="#3C5488", Others="#000000"
   )
+
   clean_type <- function(df) df %>%
     mutate(Type = trimws(Type),
            Type = ifelse(Type %in% names(type_pal), Type, "Others"))
 
-  full_type <- clean_type(full_raw); sub_type <- clean_type(subsample_raw)
+  full_type <- clean_type(full_raw)
+  sub_type  <- clean_type(subsample_raw)
 
   type_counts_full <- full_type %>%
     group_by(Year, Type) %>%
@@ -398,8 +408,8 @@ for (d in runs) {
       theme(legend.position = "bottom", legend.direction = "horizontal")
   }
 
-  p_type_full <- plot_type(type_counts_full, scale_type_full, "(A) Isolates & Cases by Host Type (Full Data)")
-  p_type_sub  <- plot_type(type_counts_sub,  scale_type_sub,  "(B) Isolates & Cases by Host Type (Subsample)")
+  p_type_full <- plot_type(type_counts_full, scale_type_full, "Isolates & Cases by Host Type (Full Data)")
+  p_type_sub  <- plot_type(type_counts_sub,  scale_type_sub,  "Isolates & Cases by Host Type (Subsample)")
 
   combined_type <- (p_type_full / p_type_sub) +
     plot_layout(guides = "collect") &
@@ -409,16 +419,31 @@ for (d in runs) {
     GeoCluster_One="#4DBBD5", GeoCluster_Two="#F39B7F",
     GeoCluster_Three="#3C5488", GeoCluster_Four="#BCBD22", GeoCluster_Five="#1B9E77"
   )
-  clean_geo <- function(df) df %>%
-    mutate(GeoCluster = trimws(GeoCluster),
-           GeoCluster = ifelse(GeoCluster %in% names(geo_pal), GeoCluster, "Others"),
-           GeoCluster = factor(
-             GeoCluster,
-             levels = c("GeoCluster_One","GeoCluster_Two","GeoCluster_Three","GeoCluster_Four","GeoCluster_Five","Others")
-           )
-           )
 
-  full_geo <- clean_geo(full_raw); sub_geo <- clean_geo(subsample_raw)
+  geo_breaks <- c(
+    "GeoCluster_One","GeoCluster_Two","GeoCluster_Three","GeoCluster_Four","GeoCluster_Five"
+  )
+
+  geo_labels <- c(
+    GeoCluster_One   = "South-Eastern Europe",
+    GeoCluster_Two   = "Central-Eastern Europe",
+    GeoCluster_Three = "Central-Western Europe",
+    GeoCluster_Four  = "Northern Europe",
+    GeoCluster_Five  = "Central-Southern Europe"
+  )
+
+  clean_geo <- function(df) df %>%
+    mutate(
+      GeoCluster = trimws(GeoCluster),
+      GeoCluster = ifelse(GeoCluster %in% names(geo_pal), GeoCluster, "Others"),
+      GeoCluster = factor(
+        GeoCluster,
+        levels = geo_breaks
+      )
+    )
+
+  full_geo <- clean_geo(full_raw)
+  sub_geo  <- clean_geo(subsample_raw)
 
   geo_counts_full <- full_geo %>%
     group_by(Year, GeoCluster) %>%
@@ -444,9 +469,13 @@ for (d in runs) {
         aes(x = Year, y = total_cases * sf, label = "Case Counts"),
         colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
       ) +
-      scale_fill_manual(values = geo_pal, name = "GeoCluster", drop = FALSE,
-                              labels = c("GeoCluster One","GeoCluster Two","GeoCluster Three",
-                 "GeoCluster Four","GeoCluster Five","Others")) +
+      scale_fill_manual(
+        values = c(geo_pal, Others = "#000000"),
+        name   = "Region",
+        drop   = FALSE,
+        breaks = geo_breaks,
+        labels = unname(geo_labels[geo_breaks])
+      ) +
       scale_x_continuous(breaks = 2016:2025) +
       scale_y_continuous("Number of Isolates",
                          sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
@@ -455,8 +484,8 @@ for (d in runs) {
       theme(legend.position = "bottom", legend.direction = "horizontal")
   }
 
-  p_geo_full <- plot_geo(geo_counts_full, scale_geo_full, "Isolates & Cases by GeoCluster (Full Data)")
-  p_geo_sub  <- plot_geo(geo_counts_sub,  scale_geo_sub,  "Isolates & Cases by GeoCluster (Subsample)")
+  p_geo_full <- plot_geo(geo_counts_full, scale_geo_full, "Isolates & Cases by Region (Full Data)")
+  p_geo_sub  <- plot_geo(geo_counts_sub,  scale_geo_sub,  "Isolates & Cases by Region (Subsample)")
 
   combined_geo <- (p_geo_full / p_geo_sub) +
     plot_layout(guides = "collect") &
@@ -478,7 +507,6 @@ for (d in runs) {
          combined_geo, width = 14, height = 9, dpi = 300)
   ggsave(paste0("GeoClusters_subsampling", suffix_num, ".pdf"),
          combined_geo, width = 14, height = 9)
-  # =============== END: PLOTTING PIPELINE ===================================
 
   setwd(base_dir)
 }

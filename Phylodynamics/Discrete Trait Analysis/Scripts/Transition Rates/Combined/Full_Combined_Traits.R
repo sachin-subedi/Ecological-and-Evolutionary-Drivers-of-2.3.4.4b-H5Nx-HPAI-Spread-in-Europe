@@ -6,7 +6,7 @@ library(ggnewscale)
 library(scales)
 library(grid)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined/")
+setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined_200m/")
 
 input_files <- c(
   "HG_bf_Subsample1.csv",
@@ -15,21 +15,30 @@ input_files <- c(
 )
 tags <- c("Subsample1", "Subsample2", "Subsample3")
 
-rename_labels <- function(x) {
-  x_chr <- as.character(x)
-  x_chr[grepl("^GAP", x_chr) | is.na(x_chr)] <- ""
-  x_chr
-}
+suffixes_keep <- c(1,2,3,4,5)
 
 hab_codes <- c("Coastal", "Wetland", "Farm", "Grassland", "Forest")
-suffixes  <- 1:5
 
-nodes <- unlist(
-  lapply(suffixes, function(s) {
-    group <- paste0(hab_codes, s)
-    if (s < max(suffixes)) c(group, paste0("GAP", s)) else group
-  })
-)
+suffix_short <- c("1" = "SE", "2" = "CE", "3" = "CW", "4" = "N", "5" = "CS")
+
+rename_labels <- function(x) {
+  x_chr <- as.character(x)
+  
+  x_chr[grepl("^GAP", x_chr) | is.na(x_chr)] <- ""
+  
+  idx <- x_chr != "" & !grepl("^GAP", x_chr)
+  
+  if (any(idx)) {
+    suf <- sub(".*?(\\d)$", "\\1", x_chr[idx])
+    hab <- sub("\\d$", "", x_chr[idx])
+    ab  <- unname(suffix_short[suf])
+    
+    ok <- !is.na(ab)
+    x_chr[idx][ok] <- paste0(hab[ok], "-", ab[ok])
+  }
+  
+  x_chr
+}
 
 suffix_cols <- list(
   "1" = c(alpha("#4DBBD5", 0.25), "#4DBBD5"),
@@ -39,7 +48,7 @@ suffix_cols <- list(
   "5" = c(alpha("#1B9E77", 0.25), "#1B9E77")
 )
 
-global_max   <- 3
+global_max    <- 3
 LEG_BARWIDTH  <- unit(80, "pt")
 LEG_BARHEIGHT <- unit(6,  "pt")
 
@@ -81,7 +90,7 @@ for (k in seq_along(input_files)) {
         Rate < 3   ~ 2,
         TRUE       ~ 3
       ),
-      
+
       BF_cat = dplyr::case_when(
         From != To &
           !grepl("^GAP", From) &
@@ -98,12 +107,21 @@ for (k in seq_along(input_files)) {
         TRUE ~ NA_character_
       ),
       BF_star = dplyr::case_when(
-        BF_cat == "10–30 (strong)"          ~ "*",
-        BF_cat == "30–100 (very strong)"    ~ "**",
-        BF_cat == ">100 (decisive)"         ~ "***",
+        BF_cat == "10–30 (strong)"       ~ "*",
+        BF_cat == "30–100 (very strong)" ~ "**",
+        BF_cat == ">100 (decisive)"      ~ "***",
         TRUE ~ ""
       )
     )
+  
+  nodes <- unlist(
+    lapply(suffixes_keep, function(s) {
+      group <- paste0(hab_codes, s)
+      if (s < max(suffixes_keep)) c(group, paste0("GAP", s)) else group
+    })
+  )
+  df <- df %>%
+    filter(From %in% nodes, To %in% nodes)
   
   df$From <- factor(df$From, levels = nodes)
   df$To   <- factor(df$To,   levels = nodes)
@@ -118,7 +136,7 @@ for (k in seq_along(input_files)) {
       suf_to   = sub(".*?(\\d)$", "\\1", as.character(To))
     ) %>%
     filter(suf_from == suf_to)
-
+  
   p <- ggplot() +
     scale_x_discrete(
       drop   = FALSE,
@@ -135,11 +153,11 @@ for (k in seq_along(input_files)) {
     theme(
       axis.text.x  = element_text(size = 20, angle = 45, hjust = 1),
       axis.text.y  = element_text(size = 20),
-      axis.title.x = element_text(size = 22, face = "bold"),  # Sink
-      axis.title.y = element_text(size = 22, face = "bold")   # Source
+      axis.title.x = element_text(size = 22, face = "bold"),
+      axis.title.y = element_text(size = 22, face = "bold")
     )
   
-  for (s in as.character(1:5)) {
+  for (s in as.character(suffixes_keep)) {
     subdat <- df %>%
       filter(sub(".*?(\\d)$", "\\1", as.character(From)) == s)
     
@@ -153,26 +171,29 @@ for (k in seq_along(input_files)) {
         linewidth = 0.5
       ) +
       scale_fill_gradient(
-        name   = if (s == "1") "Transition rate" else NULL,  # title only once
-        low    = suffix_cols[[s]][1],
-        high   = suffix_cols[[s]][2],
-        limits = c(0, global_max),
-        breaks = c(0, 1, 2, 3),   # show 0,1,2,3 in legend
+        name     = if (s == as.character(suffixes_keep[1])) "Transition rate" else NULL,
+        low      = suffix_cols[[s]][1],
+        high     = suffix_cols[[s]][2],
+        limits   = c(0, global_max),
+        breaks   = c(0, 1, 2, 3),
         na.value = "white",
-        guide  = guide_colorbar(
-          order         = ord,
+        guide    = guide_colorbar(
+          order          = ord,
           direction      = "horizontal",
           title.position = "top",
           barwidth       = LEG_BARWIDTH,
           barheight      = LEG_BARHEIGHT,
-          ticks          = (s == "5"),
-          label          = (s == "5"),
+          ticks          = (s == as.character(tail(suffixes_keep, 1))),
+          label          = (s == as.character(tail(suffixes_keep, 1))),
           label.position = "bottom"
         )
       )
-    
-    if (s != "5") p <- p + ggnewscale::new_scale_fill()
+
+    if (s != as.character(tail(suffixes_keep, 1))) {
+      p <- p + ggnewscale::new_scale_fill()
+    }
   }
+
   p <- p +
     geom_tile(
       data = df_within,
@@ -181,7 +202,6 @@ for (k in seq_along(input_files)) {
       colour = "black",
       linewidth = 0.4
     )
-  
   p <- p +
     geom_text(
       data = df %>% filter(BF_star != ""),
@@ -194,12 +214,8 @@ for (k in seq_along(input_files)) {
     To     = factor(levels(df$To)[1],   levels = levels(df$To)),
     From   = factor(levels(df$From)[1], levels = levels(df$From)),
     BF_cat = factor(
-      c("10–30 (strong)",
-        "30–100 (very strong)",
-        ">100 (decisive)"),
-      levels = c("10–30 (strong)",
-                 "30–100 (very strong)",
-                 ">100 (decisive)")
+      c("10–30 (strong)", "30–100 (very strong)", ">100 (decisive)"),
+      levels = c("10–30 (strong)", "30–100 (very strong)", ">100 (decisive)")
     )
   )
   
@@ -221,27 +237,21 @@ for (k in seq_along(input_files)) {
         direction      = "vertical",
         nrow           = 3,
         byrow          = TRUE,
-        override.aes   = list(
-          alpha = 1,
-          label = c("*", "**", "***")
-        )
+        override.aes   = list(alpha = 1, label = c("*", "**", "***"))
       )
     )
   
   print(p)
   
-  out_file <- paste0(
-    "HG_Rates_Full_heatmap_allSubsamples_",
-    tag, ".png"
-  )
+  out_file <- paste0("Regions_all_HG_Rates_heatmap_", tag, ".png")
   
   ggsave(
     filename = out_file,
-    plot = p,
-    width = 18,
-    height = 14,
-    bg = "white",
-    dpi = 300
+    plot     = p,
+    width    = 11,
+    height   = 10,
+    bg       = "white",
+    dpi      = 300
   )
 }
 
