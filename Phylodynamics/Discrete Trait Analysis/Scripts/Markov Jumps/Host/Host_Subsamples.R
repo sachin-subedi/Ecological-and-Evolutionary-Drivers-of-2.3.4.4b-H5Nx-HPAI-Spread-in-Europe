@@ -5,10 +5,9 @@ library(lubridate)
 library(scales)
 library(patchwork)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/Host")
+setwd("~/Host")
 options(scipen = 999)
 
-# ── Subsample files ----------------------------------------------------------
 jump_files <- c(
   "Host_Subsample1_jumpTimes.txt",
   "Host_Subsample2_jumpTimes.txt",
@@ -17,7 +16,6 @@ jump_files <- c(
 
 sub_labels <- c("Subsample1", "Subsample2", "Subsample3")
 
-# ── Host states & colors -----------------------------------------------------
 valid_states <- c("Domestic_Bird", "Domestic_Mammal", "Human", "Wild_Bird", "Wild_Mammal")
 
 src_cols <- list(
@@ -28,14 +26,12 @@ src_cols <- list(
   "Wild_Mammal"     = c(scales::alpha("#BCBD22", 0.25), "#BCBD22")
 )
 
-# Use the "high" color of each palette for strip text coloring
 strip_cols <- vapply(src_cols, function(x) x[2], character(1))
 
 year_levels   <- as.character(2016:2025)
 LEG_BARWIDTH  <- unit(80, "pt")
 LEG_BARHEIGHT <- unit(6,  "pt")
 
-# Base theme
 panel_theme <- theme_minimal(base_size = 16) +
   theme(
     panel.spacing.y    = unit(0, "lines"),
@@ -47,7 +43,6 @@ panel_theme <- theme_minimal(base_size = 16) +
     plot.margin        = margin(0, 0, 0, 0)
   )
 
-# Helper: build one plot per Source host
 make_source_plot <- function(host_ave_complete, source_key, global_max,
                              show_xaxis = FALSE, show_labels = FALSE) {
   df <- host_ave_complete %>%
@@ -86,24 +81,20 @@ make_source_plot <- function(host_ave_complete, source_key, global_max,
       axis.text.x       = if (show_xaxis) element_text(size = 16) else element_blank(),
       axis.ticks.x      = element_blank(),
       strip.text.y.left = element_text(face = "bold", size = 18, colour = strip_col)
-      # strip.background.y = element_rect(fill = scales::alpha(strip_col, 0.10), colour = NA)
+    
     )
 }
 
-# ── Output directory ---------------------------------------------------------
-out_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/Host"
+out_dir <- "Host"
 
-# ── Loop over the 3 subsamples ----------------------------------------------
 for (i in seq_along(jump_files)) {
   in_file <- jump_files[i]
   tag     <- sub_labels[i]
   
   message("Processing: ", in_file, " (", tag, ")")
   
-  # Step 0: Read data
   jumps <- read.delim(in_file, sep = "", header = TRUE)
   
-  # Step 1: Add time & year
   jumps <- jumps %>%
     mutate(
       time    = 2025.2520547945205 - as.numeric(time),
@@ -111,20 +102,16 @@ for (i in seq_along(jump_files)) {
       from_to = paste(from, to, sep = ".")
     )
   
-  # Step 2: number of unique states (used for averaging)
   state <- n_distinct(jumps$state)
   
-  # Step 3: Summarize transitions per year
   count_total <- jumps %>%
     group_by(year, from_to) %>%
     count(name = "n") %>%
     separate(from_to, into = c("From", "To"), sep = "\\.")
   
-  # Step 4: keep only Host states of interest
   count_total <- count_total %>%
     filter(From %in% valid_states, To %in% valid_states)
   
-  # Step 5: Average transitions
   host_ave <- count_total %>%
     mutate(ave = n / state)
   
@@ -133,14 +120,12 @@ for (i in seq_along(jump_files)) {
     filter(as.numeric(year) >= 2016, as.numeric(year) <= 2025) %>%
     mutate(year = as.integer(year))
   
-  # Step 6: Full grid (no self transitions)
   full_grid <- expand_grid(
     Source = valid_states,
     Sink   = valid_states,
     year   = 2016:2025
   ) %>% filter(Source != Sink)
   
-  # Step 7: Complete & label-tidy
   host_ave_complete <- full_grid %>%
     left_join(host_ave_filtered, by = c("Source", "Sink", "year")) %>%
     mutate(
@@ -151,10 +136,8 @@ for (i in seq_along(jump_files)) {
       Sink_lab   = gsub("_", " ", Sink)
     )
   
-  # Per-subsample max
   global_max <- max(host_ave_complete$ave, na.rm = TRUE)
   
-  # Build all panels (only bottom shows x-axis & legend labels)
   order_sources <- levels(host_ave_complete$Source)
   plots <- Map(
     function(h, idx) make_source_plot(
@@ -186,7 +169,6 @@ for (i in seq_along(jump_files)) {
   
   print(final_plot_host)
   
-  # Save with subsample tag
   png_file <- file.path(out_dir, paste0("Host_Transitions_tp_", tag, ".png"))
   pdf_file <- file.path(out_dir, paste0("Host_Transitions_tp_", tag, ".pdf"))
   

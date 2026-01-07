@@ -1,4 +1,4 @@
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/subsampled3/emptrees/")
+setwd("~/emptrees/")
 subsample_trees <- function(input_file, output_file, n_trees = 500) {
   lines <- readLines(input_file)
   
@@ -24,6 +24,5 @@ input_path <- "empirical_subsampled3.trees"
 output_path <- "empirical_subsampled3_500.trees"
 
 subsample_trees(input_path, output_path, n_trees = 500)
-# Verify tree count
 num_trees <- count_trees(output_path)
 cat("✅ Number of trees in output:", num_trees, "\n")

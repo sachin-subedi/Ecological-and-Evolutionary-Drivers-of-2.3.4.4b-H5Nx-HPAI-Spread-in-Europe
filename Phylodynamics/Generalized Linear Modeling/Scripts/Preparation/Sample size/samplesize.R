@@ -2,7 +2,7 @@ library(dplyr)
 library(readr)
 library(lubridate)
 
-setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/GLM/predictors/samplesize/")
+setwd("samplesize/")
 subsample_data <- read.delim("subsampled_data.tsv", sep = "\t", stringsAsFactors = FALSE) %>%
   mutate(
     Collection_Date = as.Date(Collection_Date),

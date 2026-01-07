@@ -1,15 +1,9 @@
-##############################################################################
-# 0. Libraries ---------------------------------------------------------------
-##############################################################################
 library(dplyr)
 library(stringr)
 library(purrr)
 library(coda)
 library(readr)
 
-##############################################################################
-# 1. Helper utilities --------------------------------------------------------
-##############################################################################
 find_k <- function(m){
   for (n in 1:m) {
     if (m == n * (n - 1)) return(n)
@@ -27,9 +21,6 @@ extract_last <- function(x){
   parts[, ncol(parts)]
 }
 
-##############################################################################
-# 2. File paths & settings ---------------------------------------------------
-##############################################################################
 workdir   <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Host"
 setwd(workdir)
 
@@ -41,19 +32,13 @@ log_files <- c(
   "Host_rates_Subsample3_combined.log"
 )
 
-##############################################################################
-# 3. Function to process ONE log file ---------------------------------------
-##############################################################################
 process_log_file <- function(log_file, burnin_pc = 50) {
   
-  # read log
   log_df <- read.delim(log_file, check.names = FALSE, sep = "\t")
   
-  # apply burn-in
   n_burn <- floor(burnin_pc / 100 * nrow(log_df))
   log_df <- dplyr::slice(log_df, (n_burn + 1):dplyr::n())
   
-  # identify rate columns
   rate_cols <- grep("^Host\\.rates\\.", names(log_df), value = TRUE)
   
   # infer k and prior inclusion probability
@@ -62,7 +47,6 @@ process_log_file <- function(log_file, burnin_pc = 50) {
   
   q_prior <- (log(2) + k - 1) / (k * (k - 2) / 2)
   
-  # per-transition summaries
   summaries <- map_dfr(rate_cols, function(rate_col){
     
     ind_col  <- gsub("rates", "indicators", rate_col, fixed = TRUE)
@@ -87,9 +71,6 @@ process_log_file <- function(log_file, burnin_pc = 50) {
   summaries
 }
 
-##############################################################################
-# 4. Loop over subsample logs & save outputs --------------------------------
-##############################################################################
 for (log_file in log_files) {
   
   # e.g. "Host_rates_Subsample1_combined.log" -> "Subsample1"
@@ -105,7 +86,6 @@ for (log_file in log_files) {
   message("✓ ", out_file, " saved.")
 }
 
-##Combined
 all_summaries <- map2_dfr(
   log_files,
   c("Subsample1", "Subsample2", "Subsample3"),

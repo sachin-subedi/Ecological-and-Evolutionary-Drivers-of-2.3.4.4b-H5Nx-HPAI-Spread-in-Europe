@@ -63,8 +63,8 @@ def make_geocluster_reward_plot(trees_file, out_png):
                 print(f"Skipped tree {tree_counter} (parse error: {e})")
                 continue
 
-            month_cluster_raw = {}   # raw reward per (month, cluster)
-            month_totals_raw  = {}   # total reward per month  (denominator)
+            month_cluster_raw = {}
+            month_totals_raw  = {}
 
             for node in tree.Objects:
                 if not node.traits:
@@ -127,14 +127,11 @@ def make_geocluster_reward_plot(trees_file, out_png):
         .sort_index()
     )
 
-    # (i) drop months where every cluster is zero
     plot_df = plot_df.loc[(plot_df != 0).any(axis=1)]
 
-    # (ii) renormalise so each row sums to 1
     row_sums = plot_df.sum(axis=1)
     plot_df  = plot_df.div(row_sums, axis=0).fillna(0)
 
-    # (iii) datetime index
     plot_df.index = pd.to_datetime(plot_df.index + "-01")
 
 
@@ -178,24 +175,18 @@ if __name__ == "__main__":
         dict(
             tag="Subsample1",
             trees_file=(
-                "/scratch/ss11645/old_combined/subsampled1/DTA/"
-                "Habitat_Host_GC/combined_history_trees/GeoCluster/"
                 "GeoCluster_history_Subsample1_combined.trees"
             ),
         ),
         dict(
             tag="Subsample2",
             trees_file=(
-                "/scratch/ss11645/old_combined/subsampled2/DTA/"
-                "Habitat_Host_GC/combined_history_trees/GeoCluster/"
                 "GeoCluster_history_Subsample2_combined.trees"
             ),
         ),
         dict(
             tag="Subsample3",
             trees_file=(
-                "/scratch/ss11645/old_combined/subsampled3/DTA/"
-                "Habitat_Host_GC/combined_history_trees/GeoCluster/"
                 "GeoCluster_history_Subsample3_combined.trees"
             ),
         ),

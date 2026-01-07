@@ -1,4 +1,3 @@
-
 library(ggplot2)
 library(sf)
 library(dplyr)
@@ -9,7 +8,7 @@ library(grid)
 library(lwgeom)
 library(cowplot)
 
-setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/GeoCluster")
+setwd("/GeoCluster")
 options(scipen = 999)
 
 lighten_color <- function(color, factor = 0.6) {

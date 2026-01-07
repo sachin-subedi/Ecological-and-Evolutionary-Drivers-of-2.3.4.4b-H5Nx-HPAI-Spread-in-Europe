@@ -31,7 +31,7 @@ rename_hab_code <- function(x) {
   y
 }
 
-workdir   <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined"
+workdir   <- "~/Combined"
 setwd(workdir)
 
 burnin_pc <- 50

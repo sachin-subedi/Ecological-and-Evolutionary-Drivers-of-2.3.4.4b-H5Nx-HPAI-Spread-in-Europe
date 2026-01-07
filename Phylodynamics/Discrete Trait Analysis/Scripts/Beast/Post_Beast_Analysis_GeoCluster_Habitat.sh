@@ -8,7 +8,7 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --output=log.%j.out
 #SBATCH --error=log.%j.err
-#SBATCH --mail-user=ss11645@uga.edu  
+#SBATCH --mail-user=xy12345@uga.edu  
 #SBATCH --mail-type=END,FAIL
 
 set -euo pipefail
@@ -16,15 +16,12 @@ module purge
 ml Beast/1.10.4-GCC-11.3.0
 cd "${SLURM_SUBMIT_DIR}"
 
-# ─────────── EDITABLE SETTINGS ───────────────────────────────────────────────
 RUNS=(r1 r2 r3 r4 r5)
 CLADES=(Habitat Host GeoCluster)
 BURNIN=1000000
 RESAMPLE=90000
 TAG="Subsample1"
-# ─────────────────────────────────────────────────────────────────────────────
 
-# 1 ▸ create output structure
 for cl in "${CLADES[@]}"; do
     mkdir -p "combined_rates_log/${cl}" \
              "combined_history_log/${cl}" \

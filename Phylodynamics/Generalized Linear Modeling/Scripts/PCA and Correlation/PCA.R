@@ -5,8 +5,8 @@ library(plotly)
 library(corrplot)
 library(car)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/GLM_code_predictors/PCA/")
-predictor_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/GLM_code_predictors/PCA/"
+setwd("~/PCA/")
+predictor_dir <- "~/PCA/"
 tsv_files     <- list.files(predictor_dir, pattern = "\\.tsv$", full.names = TRUE)
 
 data_list <- lapply(tsv_files, function(f) read.delim(f, header = TRUE, sep = "\t", stringsAsFactors = FALSE))
@@ -23,24 +23,24 @@ df_num  <- merged %>%
   select(where(is.numeric))
 
 colnames(df_num) <- c(
-  "Accipitridae Counts",      # accipitridae_counts
-  "Agricultural Land Areas",  # AgriculturalLand_areas
-  "Anatidae Counts",          # anatidae_counts
-  "Forest Areas",             # ForestAreas_areas
-  "Animal Population",        # Animal_Population
-  "Case Counts",              # case_counts
-  "Humidity",                 # humidity
-  "High Vegetation",          # LAI_HV
-  "Low Vegetation",           # LAI_LV
-  "Livestock Density Index",  # livestock_density_index
-  "Poultry Population",       # poultry_population
-  "Rainfall",                 # rainfall
-  "Road Transported Goods",   # road_transported_goods
-  "Temperature",              # temperature
-  "Wind Speed",               # windspeed
-  "Laridae Counts",           # laridae_counts
-  "Water Bodies Areas",       # WaterBodies_areas
-  "Wetland Areas"             # Wetlands_areas
+  "Accipitridae Counts",
+  "Agricultural Land Areas",
+  "Anatidae Counts",
+  "Forest Areas",
+  "Animal Population",
+  "Case Counts",
+  "Humidity",
+  "High Vegetation",
+  "Low Vegetation",
+  "Livestock Density Index",
+  "Poultry Population",
+  "Rainfall",
+  "Road Transported Goods",
+  "Temperature",
+  "Wind Speed",
+  "Laridae Counts",
+  "Water Bodies Areas", 
+  "Wetland Areas"
 )
 
 na_frac <- colMeans(is.na(df_num))
@@ -57,8 +57,8 @@ fviz_eig(pca, addlabels = TRUE, barfill = "grey70", barcolor = "grey40",
 
 fviz_pca_biplot(
   pca,
-  label = "var",         # show variable loadings labels
-  geom.ind = "point",    # points for GeoClusters (observations)
+  label = "var",
+  geom.ind = "point",
   col.ind = "grey35",
   repel = TRUE
 ) + theme_minimal() + labs(title = "PCA Biplot: PC1 vs PC2")
@@ -132,19 +132,17 @@ library(tibble)
 
 
 loadings <- as.data.frame(pca$rotation[, 1:3]) %>%
-  rownames_to_column("Variable")   # PC1, PC2, PC3 + Variable
+  rownames_to_column("Variable")
 
 
 project_3d <- function(x, y, z, theta = 45, phi = 25) {
   th <- theta * pi / 180
   ph <- phi   * pi / 180
   
-  # rotate around Z
   x1 <-  x * cos(th) + y * sin(th)
   y1 <- -x * sin(th) + y * cos(th)
   z1 <-  z
   
-  # tilt around X
   x2 <- x1
   y2 <- y1 * cos(ph) + z1 * sin(ph)
   
@@ -278,10 +276,8 @@ desc_stats <- purrr::imap_dfr(df_num_numeric, ~ {
   ) %>%
   dplyr::relocate(Variable, Mean, SD, Range)
 
-# Check in console
 print(desc_stats, n = Inf)
 
-# Export to CSV
 readr::write_csv(desc_stats,
                  "Predictor_descriptive_stats_mean_SD_range.csv")
 

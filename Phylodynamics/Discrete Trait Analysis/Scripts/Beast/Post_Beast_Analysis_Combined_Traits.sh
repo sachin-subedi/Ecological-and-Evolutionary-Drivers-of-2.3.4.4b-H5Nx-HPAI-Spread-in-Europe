@@ -8,7 +8,7 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --output=combine.%j.out
 #SBATCH --error=combine.%j.err
-#SBATCH --mail-user=ss11645@uga.edu
+#SBATCH --mail-user=xy12345@uga.edu
 #SBATCH --mail-type=END,FAIL
 
 set -euo pipefail
@@ -21,9 +21,7 @@ CLADES=(HG)
 BURNIN=1000000
 RESAMPLE=90000
 TAG="Subsample1"
-# ─────────────────────────────────────────────────────────────────────────────
 
-# 1 ▸ create output structure
 for cl in "${CLADES[@]}"; do
     mkdir -p "combined_rates_log/${cl}" \
              "combined_history_log/${cl}" \

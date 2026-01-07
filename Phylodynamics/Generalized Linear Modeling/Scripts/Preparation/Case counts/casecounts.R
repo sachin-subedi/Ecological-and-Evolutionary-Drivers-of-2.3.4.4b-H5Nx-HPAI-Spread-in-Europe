@@ -6,7 +6,7 @@ library(readr)
 library(tibble)
 library(tidyr)
 
-  setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/GLM_code_predictors/codes/case_counts/")
+  setwd("case_counts/")
 case_data <- read_excel("Latest Reported Events.xlsx")
 
 case_data <- case_data %>%
@@ -78,7 +78,6 @@ case_data <- case_data %>%
 GeoCluster_counts <- case_data %>%
   count(GeoCluster, name = "case_counts")
 
-# Ensure all GeoClusters are represented
 all_geo <- tibble(GeoCluster = unique(cluster_region_lookup$GeoCluster))
 GeoCluster_counts <- all_geo %>%
   left_join(GeoCluster_counts, by = "GeoCluster") %>%

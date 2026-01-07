@@ -1,4 +1,4 @@
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/subsampled3/combined/")
+setwd("~/combined/")
 
 data1 <- read.delim("subsampled_data.tsv", sep="\t", stringsAsFactors=FALSE)
 colnames(data1)
@@ -49,7 +49,7 @@ library(readr)
 library(stringr)
 library(dplyr)
 
-base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/subsampled3/combined/"
+base_dir <- "~/combined/"
 tsv_path  <- file.path(base_dir, "combined_compact_subsampled_data3.tsv")
 fasta_out <- file.path(base_dir, "combined_compact_subsampled_data3.fasta")
 

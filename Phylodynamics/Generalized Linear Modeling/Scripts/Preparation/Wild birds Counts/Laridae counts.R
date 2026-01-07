@@ -2,7 +2,7 @@ library(tidyverse)
 library(sf)
 library(rnaturalearth)
 
-csv_path <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/output/file/Family/Laridae/filtered_data_combined_Laridae.csv"
+csv_path <- "filtered_data_combined_Laridae.csv"
 
 birds <- read_csv(
   csv_path,

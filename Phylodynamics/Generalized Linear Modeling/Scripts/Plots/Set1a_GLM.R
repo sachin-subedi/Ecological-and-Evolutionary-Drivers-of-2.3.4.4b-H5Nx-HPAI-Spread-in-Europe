@@ -6,10 +6,10 @@ library(readr)
 library(patchwork)
 library(purrr)
 
-setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/GLM")
+setwd("GLM")
 
 
-base_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline"
+base_dir <- "pipeline"
 
 glm_dirs <- c(
   Subsample1 = file.path(base_dir, "subsampled1/combined/reproduce/GLM"),
@@ -97,7 +97,7 @@ effect_size_plot <- ggplot(
     aes(size = pp),
     shape = 21,
     colour = "black",
-    show.legend = FALSE        # ⬅ no legend from the points
+    show.legend = FALSE
   ) +
   geom_errorbarh(
     aes(xmin = CoefLowerHPD, xmax = CoefUpperHPD),

@@ -7,8 +7,8 @@ library(patchwork)
 library(purrr)
 
 
-setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/GLM")
-base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline"
+setwd("GLM")
+base_dir <- "~/pipeline"
 
 glm_dirs <- c(
   Subsample1 = file.path(base_dir, "subsampled1/combined/reproduce/GLM"),

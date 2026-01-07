@@ -3,7 +3,7 @@ options(scipen = 999)
 library(dplyr)
 library(ggplot2)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Habitat")
+setwd("~/Habitat")
 
 bf_files <- c(
   "Habitat_bf_Subsample1.csv",

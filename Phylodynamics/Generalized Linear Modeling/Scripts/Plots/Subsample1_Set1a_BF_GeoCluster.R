@@ -94,6 +94,6 @@ GLMSummarize <- function(dirname) {
   }
 }
 
-dirname <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/subsampled1/combined/reproduce/GLM/Set1a/"
+dirname <- "/Set1a/"
 GLMSummarize(dirname)
 

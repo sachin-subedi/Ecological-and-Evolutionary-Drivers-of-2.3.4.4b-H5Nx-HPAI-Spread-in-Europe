@@ -10,10 +10,10 @@ ISO38 = [
     "LVA","MDA","MKD","MNE","NLD","NOR","POL","PRT","ROU","SRB","SVK","SVN",
     "SWE","UKR"
 ]
-CLC_RASTER = "/home/ss11645/Landcover/U2018_CLC2018_V2020_20u1.tif"
-SHAPEFILE = "/home/ss11645/Landcover/shapes/ne_110m_admin_0_countries.shp"
+CLC_RASTER = "/U2018_CLC2018_V2020_20u1.tif"
+SHAPEFILE = "/shapes/ne_110m_admin_0_countries.shp"
 LOOKUP_CSV = "cluster_lookup_auto.csv"
-CELL_AREA_KM2 = 0.01  # 100 m × 100 m
+CELL_AREA_KM2 = 0.01
 PICKLE_PATH = "filtered_stats.pkl"
 
 AI_CLC_CODES = [
@@ -53,7 +53,7 @@ CAT_MAP = {
 
 countries = (
     gpd.read_file(SHAPEFILE)
-      .set_crs(epsg=4326).to_crs(epsg=3035)  # match CLC raster CRS
+      .set_crs(epsg=4326).to_crs(epsg=3035)
       .loc[lambda d: d["ISO_A3_EH"].isin(ISO38), ["ISO_A3_EH", "ADMIN", "geometry"]]
       .rename(columns={"ISO_A3_EH": "ISO3", "ADMIN": "Country"})
       .reset_index(drop=True)

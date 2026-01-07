@@ -10123,7 +10123,7 @@
 	</coalescentSimulator>
  -->
 	
-	 <empiricalTreeDistributionModel id="treeModel" fileName="/scratch/ss11645/old_combined/subsampled2/beast/emptrees/trees9000/oldcombined_empirical_subsampled2_500.trees">
+	 <empiricalTreeDistributionModel id="treeModel" fileName="oldcombined_empirical_subsampled2_500.trees">
 		<taxa idref="taxa"/>
 		<nodeTraits rootNode="false" internalNodes="false" leafNodes="true" traitDimension="5" name="GeoCluster">
 			<parameter id="leafTraits"/>

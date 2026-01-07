@@ -6,7 +6,7 @@ library(ggnewscale)
 library(scales)
 library(grid)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined_200m/")
+setwd("~/Combined_200m/")
 
 input_files <- c(
   "HG_bf_Subsample1.csv",

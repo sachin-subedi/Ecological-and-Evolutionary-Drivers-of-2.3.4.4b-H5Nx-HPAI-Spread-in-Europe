@@ -6,9 +6,9 @@ library(readr)
 library(patchwork)
 library(purrr)
 
-setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/GLM")
+setwd("GLM")
 
-base_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline"
+base_dir <- "pipeline"
 
 glm_dirs <- c(
   Subsample1 = file.path(base_dir, "subsampled1/combined/reproduce/GLM"),
@@ -83,9 +83,9 @@ combined_glm <- combined_glm %>%
   )
 
 sub_cols <- c(
-  "Subsample1" = "#F39B7F",  # green
-  "Subsample2" = "#1B9E77",  # orange
-  "Subsample3" = "#3C5488"   # purple
+  "Subsample1" = "#F39B7F",
+  "Subsample2" = "#1B9E77",
+  "Subsample3" = "#3C5488"
 )
 
 effect_size_plot <- ggplot(
