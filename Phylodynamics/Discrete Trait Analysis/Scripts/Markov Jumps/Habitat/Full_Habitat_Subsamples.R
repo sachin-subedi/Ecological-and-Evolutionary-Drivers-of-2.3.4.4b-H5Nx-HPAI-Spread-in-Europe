@@ -5,7 +5,7 @@ library(lubridate)
 library(scales)
 library(patchwork)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/Habitat")
+setwd("~/Habitat")
 options(scipen = 999)
 
 jump_files <- c(
@@ -91,7 +91,7 @@ make_source_plot <- function(habitat_ave_complete, source_key, global_max,
     )
 }
 
-out_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/Habitat"
+out_dir <- "Habitat"
 
 for (i in seq_along(jump_files)) {
   

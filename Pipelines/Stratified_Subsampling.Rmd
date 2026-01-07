@@ -16,7 +16,7 @@ library(readxl)
 
 #Set Working Directory
 ```{r}
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/")
+setwd("~/GitHub/")
 ```
 
 ### Loading data for subsampling
@@ -65,10 +65,8 @@ subsample_and_save <- function(data, seed, label, max_samples = 2) {
   print(table(subsampled_data$Year))
   print(table(subsampled_data$Habitat))
 
-  # Create folder if not exists
   if (!dir.exists(label)) dir.create(label)
 
-  # Save TSV inside the folder
   out_file <- file.path(label, paste0(label, ".tsv"))
   write.table(subsampled_data, out_file, sep="\t", row.names=FALSE, quote=FALSE)
 
@@ -88,7 +86,7 @@ subsampled3 <- subsample_and_save(data, seed = 8848,   label = "subsampled3")
 library(dplyr)
 library(readr)
 
-base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/"
+base_dir <- "~/GitHub/"
 
 sub1 <- read_tsv(file.path(base_dir, "subsampled1", "subsampled1.tsv"), show_col_types = FALSE)
 sub2 <- read_tsv(file.path(base_dir, "subsampled2", "subsampled2.tsv"), show_col_types = FALSE)
@@ -104,14 +102,12 @@ cat("subsampled1:", length(ids1), "unique IDs\n")
 cat("subsampled2:", length(ids2), "unique IDs\n")
 cat("subsampled3:", length(ids3), "unique IDs\n\n")
 
-# Pairwise overlaps
 cat("Overlaps:\n")
 cat("1 ∩ 2:", length(intersect(ids1, ids2)), "\n")
 cat("1 ∩ 3:", length(intersect(ids1, ids3)), "\n")
 cat("2 ∩ 3:", length(intersect(ids2, ids3)), "\n")
 cat("1 ∩ 2 ∩ 3:", length(Reduce(intersect, list(ids1, ids2, ids3))), "\n\n")
 
-# Unique to each
 cat("Unique IDs per set:\n")
 cat("Only in subsampled1:", length(setdiff(ids1, union(ids2, ids3))), "\n")
 cat("Only in subsampled2:", length(setdiff(ids2, union(ids1, ids3))), "\n")
@@ -122,7 +118,7 @@ cat("Only in subsampled3:", length(setdiff(ids3, union(ids1, ids2))), "\n")
 ```{r}
 library(ggplot2)
 
-base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/"
+base_dir <- "~/GitHub/"
 f1 <- file.path(base_dir, "subsampled1", "subsampled1.tsv")
 f2 <- file.path(base_dir, "subsampled2", "subsampled2.tsv")
 f3 <- file.path(base_dir, "subsampled3", "subsampled3.tsv")
@@ -164,9 +160,9 @@ circle_df <- function(cx, cy, r = 1.5, n = 400, id = "A") {
   )
 }
 
-c1 <- c(-1.4,  0.0)  # subsampled1
-c2 <- c( 1.4,  0.0)  # subsampled2
-c3 <- c( 0.0,  1.6)  # subsampled3
+c1 <- c(-1.4,  0.0)
+c2 <- c( 1.4,  0.0)
+c3 <- c( 0.0,  1.6)
 r  <- 1.8
 
 circles <- rbind(
@@ -175,7 +171,6 @@ circles <- rbind(
   circle_df(c3[1], c3[2], r, id = "subsampled3")
 )
 
-# ---- colors (your request) ----
 fill_map <- c(
   subsampled1 = "#CD5C5C",
   subsampled2 = "#0072B2",
@@ -213,7 +208,7 @@ p <- ggplot() +
     legend.box        = "full",
     legend.title    = element_text(size = 14, face = "bold"),
     legend.text     = element_text(size = 13),
-    plot.title      = element_blank()   # remove title
+    plot.title      = element_blank()
   )
 
 p <- p +
@@ -248,7 +243,6 @@ library(scales)
 library(patchwork)
 library(readxl)
 
-# setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/")
 runs <- c("subsampled1","subsampled2","subsampled3")
 
 required_seq  <- "final_seq_data.tsv"
@@ -290,12 +284,11 @@ for (d in runs) {
   message("Running plots in: ", d)
   setwd(file.path(base_dir, d))
 
-  # ---- Read inputs ----------------------------------------------------------
+
   full_raw      <- read.delim("final_seq_data.tsv",  sep = "\t", stringsAsFactors = FALSE)
   subsample_raw <- read.delim("subsampled_data.tsv", sep = "\t", stringsAsFactors = FALSE)
   case_raw      <- read_excel("Latest Reported Events.xlsx")
 
-  # ---- Use Collection_Date_Final and derive Year ----------------------------
   full_raw <- full_raw %>%
     mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
            Year = lubridate::year(Collection_Date_Final))
@@ -515,7 +508,7 @@ for (d in runs) {
 ## Writing a fasta file
 ```{r}
 
-base_dir <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/"
+base_dir <- "~/GitHub/"
 
 runs <- c("subsampled1","subsampled2","subsampled3")
 

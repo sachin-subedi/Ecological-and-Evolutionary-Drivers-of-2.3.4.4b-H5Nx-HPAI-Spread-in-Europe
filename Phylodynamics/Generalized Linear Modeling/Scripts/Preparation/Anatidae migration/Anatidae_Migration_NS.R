@@ -10,8 +10,8 @@ suppressPackageStartupMessages({
 
 sf_use_s2(TRUE)
 
-csv_path <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/output/file/Family/Anatidae/filtered_data_combined_Anatidae.csv"
-out_dir  <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/predictors/Anatidae_migratory_noradius"
+csv_path <- "filtered_data_combined_Anatidae.csv"
+out_dir  <- "biased"
 years    <- 2016:2025
 
 DIAG_EPS <- 1e-11
@@ -32,7 +32,23 @@ cluster_region_lookup <- tribble(
   "Sweden","GeoCluster_Four","Switzerland","GeoCluster_Three","Ukraine","GeoCluster_Two",
   "United Kingdom","GeoCluster_Three"
 )
+
 clusters <- c("GeoCluster_One","GeoCluster_Two","GeoCluster_Three","GeoCluster_Four","GeoCluster_Five")
+
+cluster_pretty <- c(
+  "GeoCluster_One"   = "South-Eastern",
+  "GeoCluster_Two"   = "Central-Eastern",
+  "GeoCluster_Three" = "Central-Western",
+  "GeoCluster_Four"  = "Northern",
+  "GeoCluster_Five"  = "Central-Southern"
+)
+
+lab_gc <- function(x){
+  x <- as.character(x)
+  out <- unname(cluster_pretty[x])
+  out[is.na(out)] <- x[is.na(out)]
+  out
+}
 
 season_from_doy <- function(d) {
   d <- as.integer(d)
@@ -43,6 +59,7 @@ season_from_doy <- function(d) {
 ensure_dir <- function(p){ if (!dir.exists(p)) dir.create(p, recursive = TRUE, showWarnings = FALSE) }
 
 to_square <- function(df_AB_val, diag_eps = DIAG_EPS){
+  # df_AB_val has A,B,val
   grid <- tidyr::expand_grid(A = clusters, B = clusters)
   mdf  <- grid %>% left_join(df_AB_val, by = c("A","B")) %>%
     mutate(val = replace_na(val, 0)) %>%
@@ -175,6 +192,7 @@ node_genus_by_year_season <- function(y, s){
 }
 
 build_migratory_for_year <- function(y){
+  # SPRING
   ng_spr <- node_genus_by_year_season(y, "spring")
   spring_df <- NULL
   if (!is.null(ng_spr)) {
@@ -201,6 +219,8 @@ build_migratory_for_year <- function(y){
       }
     }
   }
+  
+  # FALL
   ng_fall <- node_genus_by_year_season(y, "fall")
   fall_df <- NULL
   if (!is.null(ng_fall)) {
@@ -227,8 +247,10 @@ build_migratory_for_year <- function(y){
       }
     }
   }
+  
   mig <- bind_rows(spring_df, fall_df)
   if (is.null(mig) || nrow(mig)==0) return(NULL)
+  
   mig %>%
     filter(A != B) %>%
     group_by(A,B) %>%
@@ -284,6 +306,7 @@ for (y in years) {
 }
 pair_year <- bind_rows(per_year)
 if (nrow(pair_year) == 0) stop("No per-year summaries produced. Check input/date parsing.")
+
 avg_by_season <- function(s, col){
   grid_yab <- tidyr::expand_grid(year = years, A = clusters, B = clusters) %>% filter(A != B)
   dat <- pair_year %>%
@@ -334,11 +357,13 @@ write_matrix_tsv(NM_SUM, file.path(nm_dir, "Anatidae_nonmig_SUMW.tsv"))
 write_matrix_tsv(NM_MEN, file.path(nm_dir, "Anatidae_nonmig_MEANW.tsv"))
 
 message("✓ Wrote NONMIG matrices (RAW) to: ", nm_dir)
-
 message("ALL DONE ✅ (Migratory = spring+fall pooled; no radius; RAW only)")
 
-
-suppressPackageStartupMessages({ library(tidyverse); library(scales); library(grid) })
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(scales)
+  library(grid)
+})
 
 sum_path_ns <- file.path(out_dir, "season_migratory_raw", "Anatidae_migratory_SUMW.tsv")
 M_SUM_NS <- readr::read_tsv(sum_path_ns, show_col_types = FALSE) |>
@@ -394,10 +419,7 @@ p_hm <- ggplot(hm_df, aes(B, A, fill = val_plot)) +
       ticks = TRUE
     )
   ) +
-  labs(
-    x = "TO",
-    y = "FROM",
-  ) +
+  labs(x = "TO", y = "FROM") +
   coord_fixed() +
   theme_minimal(base_size = 14) +
   theme(
@@ -405,29 +427,30 @@ p_hm <- ggplot(hm_df, aes(B, A, fill = val_plot)) +
     legend.title    = element_text(face = "bold"),
     panel.grid      = element_blank(),
     axis.title      = element_text(face = "bold"),
-    plot.title      = element_text(face = "bold", hjust = 0.5),
     axis.text.x     = element_text(angle = 45, hjust = 1, face = "bold"),
     axis.text.y     = element_text(angle = 0, hjust = 1, face = "bold")
   ) +
-  scale_x_discrete(labels = function(x) gsub("_", " ", x)) +
-  scale_y_discrete(labels = function(x) gsub("_", " ", x))
+  scale_x_discrete(labels = lab_gc) +
+  scale_y_discrete(labels = lab_gc)
 
 print(p_hm)
 
-
 ggsave(
-  filename = "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/predictors/Anatidae_migratory_noradius/InterCluster_With_NS.png",
+  filename = "InterCluster_With_NS.png",
   plot     = p_hm,
   width    = 8,
   height   = 8,
   dpi      = 300,
   units    = "in",
-  bg = 'white'
+  bg = "white"
 )
 
-##Sankey
-
-suppressPackageStartupMessages({ library(tidyverse); library(scales); library(grid) })
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(scales)
+  library(grid)
+  library(ggalluvial)
+})
 
 sum_path_ns <- file.path(out_dir, "season_migratory_raw", "Anatidae_migratory_SUMW.tsv")
 M_SUM_NS <- readr::read_tsv(sum_path_ns, show_col_types = FALSE) |>
@@ -446,30 +469,27 @@ df_long <- as_tibble(M_SUM_NS, rownames = "A") |>
   filter(as.character(A) != as.character(B),
          is.finite(val), val > 0)
 
-clusters_lab <- gsub("_", " ", clusters)
+clusters_lab <- unname(cluster_pretty[clusters])
 df_long <- df_long %>%
   mutate(
-    A_lab = factor(gsub("_", " ", as.character(A)), levels = clusters_lab),
-    B_lab = factor(gsub("_", " ", as.character(B)), levels = clusters_lab)
+    A_lab = factor(lab_gc(A), levels = clusters_lab),
+    B_lab = factor(lab_gc(B), levels = clusters_lab)
   )
 
 cluster_pal <- c(
-  "GeoCluster One"   = "#4DBBD5",  # GeoCluster_One
-  "GeoCluster Two"   = "#F39B7F",  # GeoCluster_Two
-  "GeoCluster Three" = "#3C5488",  # GeoCluster_Three
-  "GeoCluster Four"  = "#BCBD22",  # GeoCluster_Four
-  "GeoCluster Five"  = "#1B9E77"   # GeoCluster_Five
+  "South-Eastern"    = "#4DBBD5",
+  "Central-Eastern"  = "#F39B7F",
+  "Central-Western"  = "#3C5488",
+  "Northern"         = "#BCBD22",
+  "Central-Southern" = "#1B9E77"
 )
 
-p_sankey <- ggplot(
-  df_long,
-  aes(y = val, axis1 = A_lab, axis2 = B_lab)
-) +
+p_sankey <- ggplot(df_long, aes(y = val, axis1 = A_lab, axis2 = B_lab)) +
   geom_alluvium(aes(fill = A_lab), width = 0.25, alpha = 0.9, knot.pos = 0.35) +
   geom_stratum(width = 0.35, fill = "white", color = "black") +
   geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 4, vjust = -0.4) +
   scale_x_discrete(limits = c("From", "To")) +
-  scale_fill_manual(values = cluster_pal, guide = "none") +  # <- your colors
+  scale_fill_manual(values = cluster_pal, guide = "none") +
   scale_y_continuous(NULL, breaks = NULL, labels = NULL,
                      expand = expansion(mult = c(0.02, 0.05))) +
   theme_minimal(base_size = 14) +
@@ -482,17 +502,15 @@ p_sankey <- ggplot(
 
 print(p_sankey)
 
-
 ggsave(
-  filename = "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/predictors/Anatidae_migratory_noradius/Anatidae_NS_bias_Sankey.png",
+  filename = "Anatidae_NS_bias_Sankey.png",
   plot     = p_sankey,
   width    = 10,
   height   = 6,
   dpi      = 300,
   units    = "in",
-  bg = 'white'
+  bg = "white"
 )
-###Plotting:
 
 suppressPackageStartupMessages({
   library(dplyr); library(sf); library(FNN); library(geodist); library(igraph); library(purrr)
@@ -503,7 +521,7 @@ nodes_mig0 <- birds_grid %>%
   sf::st_drop_geometry() %>%
   dplyr::group_by(grid_id) %>%
   dplyr::summarise(
-    richness_mig = dplyr::n_distinct(genus),
+    richness_mig  = dplyr::n_distinct(genus),
     taxa_list_mig = list(sort(unique(genus))),
     lat = mean(decimalLatitude,  na.rm = TRUE),
     lon = mean(decimalLongitude, na.rm = TRUE),
@@ -557,6 +575,7 @@ jacc_fun <- function(i, j){
 }
 J_ij <- purrr::map2_dbl(edges_idx$src, edges_idx$dst, jacc_fun)
 
+# 4) Edge weight & cost
 W_ij <- (as.numeric(ANGLE_ij) * J_ij) / pmax(as.numeric(DIST_ij), eps)
 edges_mig <- tibble::tibble(
   source_id = ndf$grid_id[edges_idx$src],
@@ -572,24 +591,18 @@ g_mig <- igraph::graph_from_data_frame(
   directed = FALSE,
   vertices = ndf %>% dplyr::select(grid_id, GeoCluster, richness_mig)
 )
+
 bet_mig <- igraph::betweenness(g_mig, directed = FALSE, weights = igraph::E(g_mig)$cost, normalized = TRUE)
 bet_vec <- setNames(as.numeric(bet_mig), igraph::V(g_mig)$name)
 
-if ("geometry" %in% names(nodes_mig)) {
-  nodes_mig <- nodes_mig %>%
-    dplyr::mutate(
-      betweenness = bet_vec[grid_id],
-      backbone    = !is.na(betweenness) & betweenness > 0.01   # or cluster-wise top quartile
-    )
-} else {
-  nodes_mig <- nodes_mig %>%
-    dplyr::mutate(
-      betweenness = bet_vec[grid_id],
-      backbone    = !is.na(betweenness) & betweenness > 0.01
-    )
-}
+nodes_mig <- nodes_mig %>%
+  dplyr::mutate(
+    betweenness = bet_vec[grid_id],
+    backbone    = !is.na(betweenness) & betweenness > 0.01
+  )
 
 nd_key <- nodes_mig %>% sf::st_drop_geometry() %>% dplyr::select(grid_id, GeoCluster, richness_mig, betweenness, backbone)
+
 edges_mig_bb_intra <- edges_mig %>%
   dplyr::inner_join(nd_key, by = c("source_id" = "grid_id")) %>% dplyr::rename(Gs = GeoCluster) %>%
   dplyr::inner_join(nd_key, by = c("target_id" = "grid_id")) %>% dplyr::rename(Gt = GeoCluster) %>%
@@ -597,32 +610,13 @@ edges_mig_bb_intra <- edges_mig %>%
   dplyr::filter(Gs == Gt) %>%
   dplyr::mutate(GeoCluster = Gs)
 
-
-
-library(dplyr)
-library(sf)
-library(purrr)
-library(ggplot2)
-library(scales)
-
-if (!("geometry" %in% names(nodes_mig))) {
-  nodes_mig_pts <- st_as_sf(nodes_mig, coords = c("lon","lat"), crs = 4326)
-} else {
-  nodes_mig_pts <- st_centroid(nodes_mig)
-}
-
-nodes_bb <- nodes_mig %>% mutate(has_geom = "geometry" %in% names(.)) %>%
-  { if (.$has_geom[1]) . else st_as_sf(., coords = c("lon","lat"), crs = 4326) } %>%
-  filter(backbone)
+nodes_bb <- nodes_mig %>%
+  { if ("geometry" %in% names(.)) st_centroid(.) else st_as_sf(., coords = c("lon","lat"), crs = 4326) } %>%
+  dplyr::filter(backbone)
 
 nodes_bb_pts <- if ("geometry" %in% names(nodes_bb)) st_centroid(nodes_bb) else nodes_bb
-nodes_bb_pts$GeoCluster      <- factor(nodes_bb_pts$GeoCluster,
-                                       levels = c("GeoCluster_One","GeoCluster_Two","GeoCluster_Three","GeoCluster_Four","GeoCluster_Five")
-)
 
-nd_xy <- nodes_mig %>%
-  st_drop_geometry() %>%
-  select(grid_id, lon, lat)
+nd_xy <- nodes_mig %>% st_drop_geometry() %>% select(grid_id, lon, lat)
 
 edges_bb_intra_sf <- edges_mig_bb_intra %>%
   inner_join(nd_xy, by = c("source_id" = "grid_id")) %>%
@@ -637,49 +631,11 @@ edges_bb_intra_sf <- edges_mig_bb_intra %>%
       \(xs, ys, xt, yt) st_linestring(matrix(c(xs, ys, xt, yt), ncol = 2, byrow = TRUE))
     )
   ) %>%
-  st_as_sf(crs = 4326) %>%
-  mutate(edge_w = rescale(W, to = c(0.4, 2.0)))
+  st_as_sf(crs = 4326)
 
-# --- 3) Plot -------------------------------------------------------------------
-ggplot() +
-  geom_sf(data = europe, fill = "grey95", color = "white", linewidth = 0.2) +
-  geom_sf(data = edges_bb_intra_sf, aes(linewidth = edge_w), color = "grey25", alpha = 0.85) +
-  geom_sf(
-    data = nodes_bb_pts,
-    aes(size = richness_mig, fill = betweenness),
-    shape = 21, color = "black", alpha = 0.95
-  ) +
-  scale_linewidth_continuous(name = "Corridor strength (W)") +
-  scale_fill_viridis_c(name = "Betweenness") +
-  scale_size_continuous(name = "Migration richness (unique genera)", range = c(1.4, 6)) +
-  coord_sf(xlim = c(-15, 40), ylim = c(35, 80), expand = FALSE) +
-  theme_minimal(base_size = 11) +
-  theme(legend.position = "right") +
-  labs(
-    title = "Anatidae — Migration Backbone (within cluster)",
-    subtitle = "Lines ∝ W; node size = migration-season genus richness"
-  ) +
-  facet_wrap(~ GeoCluster)
-
-library(dplyr)
-library(sf)
-library(ggplot2)
-library(scales)
-
-facet_levels <- c("GeoCluster_One","GeoCluster_Two","GeoCluster_Three",
-                  "GeoCluster_Four","GeoCluster_Five")
-
+facet_levels <- c("GeoCluster_One","GeoCluster_Two","GeoCluster_Three","GeoCluster_Four","GeoCluster_Five")
 nodes_bb_pts$GeoCluster      <- factor(nodes_bb_pts$GeoCluster,      levels = facet_levels)
-edges_ctx$GeoCluster         <- factor(edges_ctx$GeoCluster,         levels = facet_levels)
-edges_top$GeoCluster         <- factor(edges_top$GeoCluster,         levels = facet_levels)
-
-nice_names <- c(
-  GeoCluster_One   = "GeoCluster One",
-  GeoCluster_Two   = "GeoCluster Two",
-  GeoCluster_Three = "GeoCluster Three",
-  GeoCluster_Four  = "GeoCluster Four",
-  GeoCluster_Five  = "GeoCluster Five"
-)
+edges_bb_intra_sf$GeoCluster <- factor(edges_bb_intra_sf$GeoCluster, levels = facet_levels)
 
 edges_bb_intra_sf <- edges_bb_intra_sf %>%
   group_by(GeoCluster) %>%
@@ -693,12 +649,15 @@ edges_bb_intra_sf <- edges_bb_intra_sf %>%
   ) %>%
   ungroup()
 
-edges_ctx  <- dplyr::filter(edges_bb_intra_sf,  TRUE)
-edges_top  <- dplyr::filter(edges_bb_intra_sf, top)
+edges_ctx <- edges_bb_intra_sf
+edges_top <- dplyr::filter(edges_bb_intra_sf, top)
 
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(scales)
+  library(grid)
+})
 
-
-library(grid)
 lon_breaks  <- c(-20, 0, 20, 40)
 lon_labels  <- c("20°W", "0°", "20°E", "40°E")
 
@@ -739,77 +698,75 @@ p <- ggplot() +
   coord_sf(xlim = c(-25, 41), ylim = c(34, 81), expand = FALSE) +
   facet_wrap(
     ~ GeoCluster, ncol = 5,
-    labeller = labeller(GeoCluster = as_labeller(nice_names)),
+    labeller = labeller(GeoCluster = as_labeller(cluster_pretty)),
     drop = FALSE
   ) +
-guides(
-  fill = guide_colorbar(
-    order          = 1,
-    title.position = "top",
-    direction      = "horizontal",
-    barwidth       = unit(5, "cm"),
-    barheight      = unit(0.6, "cm")
-  ),
-  size = guide_legend(
-    order = 2,
-    title.position = "top"
-  ),
-  linewidth = guide_legend(
-    order = 3,
-    title.position = "top",
-    override.aes = list(color = "brown")
-  )
-) +
+  guides(
+    fill = guide_colorbar(
+      order          = 1,
+      title.position = "top",
+      direction      = "horizontal",
+      barwidth       = unit(5, "cm"),
+      barheight      = unit(0.6, "cm")
+    ),
+    size = guide_legend(
+      order = 2,
+      title.position = "top"
+    ),
+    linewidth = guide_legend(
+      order = 3,
+      title.position = "top",
+      override.aes = list(color = "brown")
+    )
+  ) +
   theme_minimal(base_size = 14) +
   theme(
     text = element_text(size = 14),
     axis.text  = element_text(size = 14),
     axis.title = element_text(size = 14),
-    
     legend.title = element_text(size = 13, face = "bold"),
     legend.text  = element_text(size = 11),
-
     legend.position    = "top",
     legend.box         = "horizontal",
     legend.box.spacing = unit(1, "cm"),
-    
     panel.grid.major = element_line(color = "grey92", linewidth = 0.15),
     panel.grid.minor = element_blank(),
     strip.text = element_text(face = "bold", size = 14),
-    
     plot.title    = element_blank(),
     plot.subtitle = element_blank(),
-    
     panel.spacing.x = unit(2.0, "lines"),
     panel.spacing.y = unit(2.0, "lines"),
     panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
     plot.margin = margin(t = 2, r = 20, b = 10, l = 10)
   )
-p
+
+print(p)
 
 ggsave(
-  filename = "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/predictors/Anatidae_migratory_noradius/Anatidae_NS.png",
+  filename = "Anatidae_NS.png",
   plot     = p,
   width    = 14,
   height   = 10,
   dpi      = 300,
   units    = "in",
-  bg = 'white'
+  bg       = "white"
 )
 
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(readr)
+})
 
-
-
-library(dplyr)
-library(readr)
 mig <- birds_grid %>%
   dplyr::filter(season %in% c("spring","fall")) %>%
   sf::st_drop_geometry() %>%
   dplyr::select(grid_id, GeoCluster, genus)
 
-n_cells_total   <- mig %>% distinct(grid_id) %>% nrow()
-n_clusters_total<- mig %>% distinct(GeoCluster) %>% nrow()
+# optional: region label column
+mig <- mig %>% mutate(Region = lab_gc(GeoCluster))
 
+n_cells_total    <- mig %>% distinct(grid_id) %>% nrow()
+n_clusters_total <- mig %>% distinct(GeoCluster) %>% nrow()
 
 common_overall <- mig %>%
   distinct(grid_id, genus) %>%
@@ -820,33 +777,35 @@ common_overall <- mig %>%
 top25_overall <- common_overall %>% slice_max(n_cells, n = 25)
 print(top25_overall, n = 25)
 
-write_tsv(common_overall,
-          "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/predictors/Anatidae/common_genera_overall.tsv")
-
-
-library(dplyr)
+write_tsv(
+  common_overall,
+  "common_genera_overall.tsv"
+)
 
 mig_ccg <- mig %>%
-  distinct(GeoCluster, grid_id, genus)
+  distinct(GeoCluster, Region, grid_id, genus)
 
 cluster_cells <- mig_ccg %>%
-  distinct(GeoCluster, grid_id) %>%
-  count(GeoCluster, name = "cells_in_cluster")
+  distinct(GeoCluster, Region, grid_id) %>%
+  count(GeoCluster, Region, name = "cells_in_cluster")
 
 common_by_cluster <- mig_ccg %>%
-  count(GeoCluster, genus, name = "n_cells") %>%
-  left_join(cluster_cells, by = "GeoCluster") %>%
-  mutate(
-    prop_cells = n_cells / cells_in_cluster
-  ) %>%
+  count(GeoCluster, Region, genus, name = "n_cells") %>%
+  left_join(cluster_cells, by = c("GeoCluster","Region")) %>%
+  mutate(prop_cells = n_cells / cells_in_cluster) %>%
   arrange(GeoCluster, desc(n_cells))
 
 top10_by_cluster <- common_by_cluster %>%
-  group_by(GeoCluster) %>%
+  group_by(GeoCluster, Region) %>%
   slice_max(n_cells, n = 10, with_ties = FALSE) %>%
   ungroup()
-top10_by_cluster 
-readr::write_tsv(common_by_cluster, "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/eBird/predictors/Anatidae/common_genera_by_geocluster.tsv")
+
+print(top10_by_cluster, n = 50)
+
+readr::write_tsv(
+  common_by_cluster,
+  "common_genera_by_geocluster.tsv"
+)
 
 coverage_thresh <- 0.40
 core_coverage <- common_overall %>%
@@ -859,10 +818,8 @@ pancluster_core <- mig %>%
   mutate(prop_clusters = n_clusters / n_clusters_total) %>%
   arrange(desc(n_clusters))
 
-core_all5   <- pancluster_core %>% filter(n_clusters == n_clusters_total)
-core_4of5   <- pancluster_core %>% filter(n_clusters >= n_clusters_total - 1)
+core_all5 <- pancluster_core %>% filter(n_clusters == n_clusters_total)
+core_4of5 <- pancluster_core %>% filter(n_clusters >= n_clusters_total - 1)
 
 print(core_coverage, n = 50)
 print(core_all5,   n = 50)
-
-

@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #Set Working Directory
 ```{r}
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/GitHub/")
+setwd("~/GitHub/")
 ```
 
 ## Metadata file from GISAID
@@ -31,7 +31,6 @@ library(tibble)
 lookup <- tribble(
   ~pattern, ~Family, ~Habitat, ~Trophic_Level, ~Trophic_Niche, ~Primary_Lifestyle, ~Type,
 
-  # --- Seabirds --------------------------------------------------------------
   "murre|auk|guillemot|raxorbill|Razorbill",
       "Alcidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
   "oystercatcher|Haematopus_ostralegus",
@@ -56,8 +55,6 @@ lookup <- tribble(
       "Laridae", "Coastal", "Carnivore", "Omnivore", "Terrestrial", "Wild_Bird",
   "Black-legged Kittiwake|Black-legged_kitiwake|black-legged_kittiwake|Black-legged_kittiwake|Kittiwake|kittiwake",
       "Laridae", "Marine", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
-
-  # --- Cormorants / Pelicans / Penguins -------------------------------------
   "cormorant|Cormorant|Cormorants|great cormorant|Great cormorant|Great Cormorant|Phalacrocorax_carbo",
       "Phalacrocoracidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
   "Shag",
@@ -68,8 +65,6 @@ lookup <- tribble(
       "Pelecanidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
   "penguin",
       "Spheniscidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
-
-  # --- Marine & semi‑aquatic mammals ----------------------------------------
   "Otter|otter|LutraLutra",
       "Mustelidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
   "walrus",
@@ -80,8 +75,7 @@ lookup <- tribble(
       "Phocoenidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Mammal",
   "mink|white mink",
       "Mustelidae", "Farm", "Carnivore", "Vertivore", "Generalist", "Domestic_Mammal",
-
-  # --- Waterfowl (Anatidae) --------------------------------------------------
+  
   "Go|goose|Goose|teal|Teal|anser|wild goose|wild_goose|Wild_goose|tundra_bean_goose|Taiga bean goose|Graylag goose|graylag goose|graylag_goose|Grey_Go|Anser anser|bean_goose|Bean goose|bean goose|Eurasian_teal|Eurasian teal|eurasian teal|Common Teal|common teal",
       "Anatidae", "Wetland", "Herbivore", "Herbivore_Terrestrial", "Terrestrial", "Wild_Bird",
   "pomeranian goose|rural_goose|white-fronted Goose|White-fronted Goose|white-fronted goose|white-fronted_goose|White-fronted_goose|Anser albifrons|pink_footed_goose|pink-footed goose|Pink-footed Goose|Pink-footed_goose|pink-footed_goose|Pink-Footed_Goose|Anser brachyrhynchus|Branta ruficollis|Red-breasted_goose|Branta leucopsis|Branta canadensis|Lesser white-fronted goose|lesser white-fronted goose|Greater White-fronted Goose|greater white-fronted goose|greater_white-fronted_goose|Anser albifrons|greater canada goose|Branta bernicla|brant goose|brant|brent_goose|canada goose|Canada goose|Canada Goose|canada_goose|Canada_goose|Canada_Goose|Canadagoose|Canade goose|barnacle goose|Barnacle goose|Barnacle Goose|barnacle_goose|Barnacle_goose|barnacle|Anser_Brachyrhynchus_Anser_Anser",
@@ -113,7 +107,6 @@ lookup <- tribble(
   "Carolina_Duck",
       "Anatidae", "Wetland", "Herbivore", "Omnivore", "Generalist", "Wild_Bird",
 
-  # --- Wading birds & shorebirds -------------------------------------------
   "grey heron|Grey heron|Grey Heron|grey_heron|gray_heron|grey-heron|Egretta_garzetta|heron|egret|Ardea_cinerea|Ardea cinerea|Ardea alba|great_egret|great egret|Great Egret",
       "Ardeidae", "Wetland", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
   "western-cattle-egret",
@@ -137,13 +130,11 @@ lookup <- tribble(
   "Eurasian Spoonbill|Eurasian spoonbill|eurasian-spoonbill|spoonbill|sacred-ibis",
       "Threskiornithidae", "Wetland", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
 
-  # --- Humans & marine mammals ---------------------------------------------
   "human",
       "Hominidae", "Urban", "Omnivore", "Omnivore", "Terrestrial", "Human",
   "dolphin",
       "Delphinidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Mammal",
 
-  # --- Tubenoses, skuas, gannets -------------------------------------------
   "Northern Fulmar|northern fulmar|Northern_fulmar|Southern_Fulmar|Fulmar",
       "Procellariidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
   "skua|parasitic_jaeger|Great skua|Great_skua|great_skua|Great_Skua|long-tailed_skua",
@@ -151,7 +142,6 @@ lookup <- tribble(
   "Northern gannet|northern gannet|Northern Gannet|northern_gannet|Northern_gannet|Nothern_gannet|nothern_gannet|NothernGannet|gannet|Gannet|Morus_bassanus",
       "Sulidae", "Marine", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
 
-  # --- Domestic birds & farm animals ---------------------------------------
   "chicken|Ch|Chicken|Poultry|rooster|turkey|layer|hen",
       "Phasianidae", "Farm", "Herbivore", "Omnivore", "Terrestrial", "Domestic_Bird",
   "quail",
@@ -161,11 +151,9 @@ lookup <- tribble(
   "domestic goose|Anser anser domesticus|domestic_goose|Domestic_goose|Domestic_Goose|captive-goose",
       "Anatidae", "Farm", "Herbivore", "HerbivoreTerrestrial", "Terrestrial", "Domestic_Bird",
 
-  # --- Domestic mammals -----------------------------------------------------
   "domestic|cat",
       "Felidae", "Urban", "Carnivore", "Vertivore", "Terrestrial", "Domestic_Mammal",
 
-  # --- Raptors (Accipitridae) ----------------------------------------------
   "sea_eagle|Sea_eagle|white_tailed_eagle|White_Tailed_Eagle|white-tailed eagle|White-tailed eagle|White-Tailed Eagle|white-tailed_eagle|White-tailed_eagle|white-tailed sea eagle|White-tailed sea eagle|Halietus albicilla",
       "Accipitridae", "Rock", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
   "Haliaeetus leucocephalus|bald_eagle",
@@ -187,7 +175,6 @@ lookup <- tribble(
   "Harris Hawk|Harris_Hawk|Parabuteo",
       "Accipitridae", "Shrubland", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
 
-  # --- Songbirds & others ---------------------------------------------------
   "Reed_Warbler",
       "Acrocephalidae", "Wetland", "Carnivore", "Invertivore", "Insessorial", "Wild_Bird",
   "pigeon|Columba_palumbus|Pigeon",
@@ -203,7 +190,6 @@ lookup <- tribble(
   "garrulus_glandarius|Garrulus_glandarius",
       "Corvidae", "Forest", "Omnivore", "Omnivore", "Insessorial", "Wild_Bird",
 
-  # --- Falcons --------------------------------------------------------------
   "Falco peregrinus|Falco_peregrinus|falcon|P_falcon|peregrine falcon|Peregrine falcon|Peregrine Falcon|peregrine_Falcon|peregrine_falcon|Peregrine_falcon|Peregrine_Falcon|peregrine-falcon|Perigrine falcon|Pilgrim Falcon|Gyrfalcon|Hobby_Falcon",
       "Falconidae", "Grassland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
   "Hobby_Falcon",
@@ -211,15 +197,12 @@ lookup <- tribble(
   "Common Kestrel|common kestrel|common-kestrel|kestrel|Kestrel",
       "Falconidae", "Shrubland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
 
-  # --- Other galliforms -----------------------------------------------------
   "Guinea fowl|guinea_fowl|Guinea_Fowl|guinea-fowl|guinea_fowl-chicken|GuineaFowl|guineafowl|Guineafowl|Numida meleagris",
       "Numididae", "Woodland", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
 
-  # --- Passerines & small birds --------------------------------------------
   "house_sparrow",
       "Passeridae", "Human_Modified", "Herbivore", "Granivore", "Terrestrial", "Wild_Bird",
 
-  # --- Pheasants, peafowl, partridge ---------------------------------------
   "pheasant|Pheasant|common pheasant|Common pheasant|Common Pheasant|Phasianus colchicus|Phasianus_colchicus|Phasanius sp.",
       "Phasianidae", "Human_Modified", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
   "Indian Peafowl|peacock|Peacock|Common peacock|Pavo cristatus|Pavo|Pavo_cristatus|peafowl|Partridge|partridge",
@@ -229,13 +212,11 @@ lookup <- tribble(
   "Gallus_gallus|Meleagris_gallopavo|Meleagris gallopavo",
       "Phasianidae", "Forest", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
 
-  # --- Ratites --------------------------------------------------------------
   "greater Herbivore_Aquaticrhea|Rhea",
       "Rheidae", "Grassland", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
   "emy",
       "Casuariidae", "Grassland", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
 
-  # --- Owls -----------------------------------------------------------------
   "Bubo_bubo|Eurasian eagle-owl|Eurasian_eagle-owl|Eurasian eagle owl|Eurasian Eagle-Owl|eagle owl|eagle_owl|Eagle_owl",
       "Strigidae", "Rock", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
   "Ural owl|ural_owl|Strix uralensis",
@@ -249,23 +230,19 @@ lookup <- tribble(
   "tawny owl|Tawny owl|tawny_owl|Towny owel",
       "Strigidae", "Forest", "Carnivore", "Invertivore", "Insessorial", "Wild_Bird",
 
-  # --- Barn owl -------------------------------------------------------------
   "barn owl|Tyto_alba|Tyto alba",
       "Tytonidae", "Human_Modified", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
 
-  # --- Thrushes & robins ----------------------------------------------------
   "thrush",
       "Turdidae", "Forest", "Omnivore", "Invertivore", "Generalist", "Wild_Bird",
   "blackbird",
       "Turdidae", "Forest", "Omnivore", "Omnivore", "Generalist", "Wild_Bird",
 
-  # --- Robins & kingfishers -------------------------------------------------
   "european_robin",
       "Muscicapidae", "Forest", "Carnivore", "Omnivore", "Generalist", "Wild_Bird",
   "common-kingfisher",
       "Alcedinidae", "Forest", "Carnivore", "Aquatic_Predator", "Insessorial", "Wild_Bird",
 
-  # --- Wild mammals ---------------------------------------------------------
   "fox|Fox|red fox|Red fox|red_fox|Red_fox|Red_Fox|red-fox|Vulpes_vulpes|Vulpes_Vulpes|silver fox|Bush_dog|raccoon_dog|raccoon-dog",
       "Canidae", "Forest", "Carnivore", "Omnivore", "Terrestrial", "Wild_Mammal",
   "lynx|Lynx|caracal|Caracal",
@@ -275,7 +252,6 @@ lookup <- tribble(
   "bear|tibetan blue bear",
       "Ursidae", "Forest", "Carnivore", "Omnivore", "Terrestrial", "Wild_Mammal",
 
-  # --- Catch‑all ------------------------------------------------------------
   "wild bird|Wild bird|wild_bird|avian|Mixed_wild_birds|environment|NA|unknown|Feces|feces|UNL|Wild waterfowl",
       "Others", "Others", "Others", "Others", "Others", "Others"
 )
@@ -325,7 +301,7 @@ seq_data <- seq_data %>%
     matched_fallback = if_else(
       is.na(Family),
       map(Host, ~ classify_host(.x, lookup)),
-      list(rep(NA_character_, 6))  # skip if already matched
+      list(rep(NA_character_, 6))
     ),
     Family = if_else(is.na(Family),        map_chr(matched_fallback, 1), Family),
     Habitat = if_else(is.na(Habitat),      map_chr(matched_fallback, 2), Habitat),
@@ -393,7 +369,6 @@ centroids <- st_centroid(europe_map, of_largest_polygon = TRUE) %>%
              st_drop_geometry() %>% 
              dplyr::select(Country = admin, Longitude, Latitude)
 
-# check for any countries that rnaturalearth didn't return
 anti_join(tibble(Country = unique_countries), centroids, by = "Country")
 ```
 

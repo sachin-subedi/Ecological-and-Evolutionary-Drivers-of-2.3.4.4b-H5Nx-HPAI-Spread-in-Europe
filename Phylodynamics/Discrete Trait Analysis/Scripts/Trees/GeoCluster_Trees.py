@@ -255,34 +255,28 @@ def run_all_subsamples():
         dict(
             tag="Subsample1",
             tree_full=(
-                "/scratch/ss11645/old_combined/subsampled1/DTA/"
-                "Habitat_Host_GC/bssvs_rates/bssvs_rates_Subsample1.tree"
+                "bssvs_rates_Subsample1.tree"
             ),
             trees_file_violin=(
-                "/scratch/ss11645/old_combined/subsampled1/DTA/"
-                "Habitat_Host_GC/bssvs_rates/bssvs_rates_Subsample1_combined.trees"
+                "bssvs_rates_Subsample1_combined.trees"
             ),
         ),
         dict(
             tag="Subsample2",
             tree_full=(
-                "/scratch/ss11645/old_combined/subsampled2/DTA/"
-                "Habitat_Host_GC/bssvs_rates/bssvs_rates_Subsample2.tree"
+                "bssvs_rates_Subsample2.tree"
             ),
             trees_file_violin=(
-                "/scratch/ss11645/old_combined/subsampled2/DTA/"
-                "Habitat_Host_GC/bssvs_rates/bssvs_rates_Subsample2_combined.trees"
+                "bssvs_rates_Subsample2_combined.trees"
             ),
         ),
         dict(
             tag="Subsample3",
             tree_full=(
-                "/scratch/ss11645/old_combined/subsampled3/DTA/"
-                "Habitat_Host_GC/bssvs_rates/bssvs_rates_Subsample3.tree"
+                "bssvs_rates_Subsample3.tree"
             ),
             trees_file_violin=(
-                "/scratch/ss11645/old_combined/subsampled3/DTA/"
-                "Habitat_Host_GC/bssvs_rates/bssvs_rates_Subsample3_combined.trees"
+                "bssvs_rates_Subsample3_combined.trees"
             ),
         ),
     ]

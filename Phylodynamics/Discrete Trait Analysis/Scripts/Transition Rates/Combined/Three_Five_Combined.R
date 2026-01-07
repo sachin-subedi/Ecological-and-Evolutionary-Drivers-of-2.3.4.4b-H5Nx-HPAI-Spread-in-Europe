@@ -6,7 +6,7 @@ library(ggnewscale)
 library(scales)
 library(grid)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined_200m/")
+setwd("~/Combined_200m/")
 
 input_files <- c(
   "HG_bf_Subsample1.csv",
@@ -29,9 +29,9 @@ rename_labels <- function(x) {
   idx <- x_chr != "" & !grepl("^GAP", x_chr)
   
   if (any(idx)) {
-    suf <- sub(".*?(\\d)$", "\\1", x_chr[idx])        # last digit
-    hab <- sub("\\d$", "", x_chr[idx])                # remove last digit
-    ab  <- unname(suffix_short[suf])                  # CW/CS
+    suf <- sub(".*?(\\d)$", "\\1", x_chr[idx])
+    hab <- sub("\\d$", "", x_chr[idx])
+    ab  <- unname(suffix_short[suf])
     
     ok <- !is.na(ab)
     x_chr[idx][ok] <- paste0(hab[ok], "-", ab[ok])

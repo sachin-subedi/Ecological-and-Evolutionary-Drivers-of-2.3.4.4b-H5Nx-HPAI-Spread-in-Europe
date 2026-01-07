@@ -310,24 +310,18 @@ def main():
         dict(
             tag="Subsample1",
             trees_file=(
-                "/scratch/ss11645/old_combined/subsampled1/DTA/"
-                "Habitat_Host_GC/combined_history_trees/GeoCluster/"
                 "GeoCluster_history_Subsample1_combined.trees"
             ),
         ),
         dict(
             tag="Subsample2",
             trees_file=(
-                "/scratch/ss11645/old_combined/subsampled2/DTA/"
-                "Habitat_Host_GC/combined_history_trees/GeoCluster/"
                 "GeoCluster_history_Subsample2_combined.trees"
             ),
         ),
         dict(
             tag="Subsample3",
             trees_file=(
-                "/scratch/ss11645/old_combined/subsampled3/DTA/"
-                "Habitat_Host_GC/combined_history_trees/GeoCluster/"
                 "GeoCluster_history_Subsample3_combined.trees"
             ),
         ),

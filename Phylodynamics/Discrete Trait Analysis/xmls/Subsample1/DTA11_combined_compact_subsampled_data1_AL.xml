@@ -16887,7 +16887,7 @@
 	
  -->
 
-	 <empiricalTreeDistributionModel id="treeModel" fileName="/scratch/ss11645/old_combined/subsampled1/beast/emptrees/combinedtrees/oldcombined_empirical_subsampled1_500.trees">
+	 <empiricalTreeDistributionModel id="treeModel" fileName="oldcombined_empirical_subsampled1_500.trees">
 		<taxa idref="taxa"/>
 <!-- 
 		<nodeTraits rootNode="false" internalNodes="false" leafNodes="true" traitDimension="11" name="Habitat">

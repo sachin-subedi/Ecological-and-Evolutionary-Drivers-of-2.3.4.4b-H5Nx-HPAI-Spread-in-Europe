@@ -9,7 +9,7 @@
 #SBATCH --time=7-00:00:00
 #SBATCH --output=log.%j.out
 #SBATCH --error=log.%j.err
-#SBATCH --mail-user=ss11645@uga.edu  
+#SBATCH --mail-user=xy12345@uga.edu  
 #SBATCH --mail-type=END,FAIL
 
 cd $SLURM_SUBMIT_DIR

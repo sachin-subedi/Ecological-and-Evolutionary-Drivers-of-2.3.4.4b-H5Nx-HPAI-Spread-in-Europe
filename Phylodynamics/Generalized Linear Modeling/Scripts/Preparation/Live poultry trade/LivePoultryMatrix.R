@@ -4,7 +4,7 @@ library(tidyr)
 library(readr)
 library(tibble)
 
-setwd("/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/GLM_code_predictors/codes/livepoultry_trade/")
+setwd("livepoultry_trade/")
 input_file <- "TradeData_4_17_2025_0_38_32.csv"
 
 iso3_map <- c(

@@ -4,7 +4,7 @@ from rasterstats import zonal_stats
 import xarray as xr, rioxarray
 
 GRIB_FILE    = "data.grib"
-SHAPEFILE    = "/home/ss11645/Landcover/shapes/ne_110m_admin_0_countries.shp"
+SHAPEFILE    = "/shapes/ne_110m_admin_0_countries.shp"
 LAI_LV_TIF   = "lai_lv_mean_2016_2025.tif"
 LAI_HV_TIF   = "lai_hv_mean_2016_2025.tif"
 

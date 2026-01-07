@@ -5,7 +5,7 @@ library(lubridate)
 library(scales)
 library(patchwork)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/GeoCluster")
+setwd("~/GeoCluster")
 options(scipen = 999)
 
 jump_files <- c(
@@ -103,7 +103,7 @@ make_source_plot <- function(geo_ave_complete, source_key, global_max,
       strip.text.y.left = element_text(face = "bold", size = 18, colour = strip_col)
     )
 }
-out_dir <- "/Users/sachinsubedi/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/jumps/GeoCluster/Regions"
+out_dir <- "Regions"
 
 for (i in seq_along(jump_files)) {
   in_file <- jump_files[i]

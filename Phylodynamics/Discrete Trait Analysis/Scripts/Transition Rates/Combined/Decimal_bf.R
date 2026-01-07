@@ -1,7 +1,7 @@
 library(dplyr)
 library(readr)
 
-setwd("~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Combined")
+setwd("~/Combined")
 df <- read_csv("HG_bf_Subsample1.csv")
 
 df_rounded <- df %>%

@@ -21,7 +21,7 @@ extract_last <- function(x){
   parts[, ncol(parts)]
 }
 
-workdir   <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Habitat"
+workdir   <- "~/Habitat"
 setwd(workdir)
 
 burnin_pc <- 50

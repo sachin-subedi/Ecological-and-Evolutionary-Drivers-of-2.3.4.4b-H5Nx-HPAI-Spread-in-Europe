@@ -1,4 +1,3 @@
-## Relative Humidity
 import xarray as xr
 import rioxarray
 import geopandas as gpd
@@ -33,7 +32,7 @@ cluster_map = {
 }
 iso_to_cluster = {iso: cluster for cluster, members in cluster_map.items() for iso in members}
 
-SHAPEFILE = "/home/ss11645/Landcover/shapes/ne_110m_admin_0_countries.shp"
+SHAPEFILE = "/shapes/ne_110m_admin_0_countries.shp"
 
 gdf_country = (
     gpd.read_file(SHAPEFILE)

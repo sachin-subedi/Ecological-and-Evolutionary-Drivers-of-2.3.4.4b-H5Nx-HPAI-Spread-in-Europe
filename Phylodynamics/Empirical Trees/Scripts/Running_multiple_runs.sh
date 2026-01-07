@@ -9,9 +9,6 @@ NRUNS=8
 [[ -f "$XML_IN"        ]] || { echo "❌  XML file $XML_IN not found!"; exit 1; }
 [[ -f "$SBATCH_TEMPLATE" ]] || { echo "❌  SBATCH template $SBATCH_TEMPLATE not found!"; exit 1; }
 
-# ---------------------------------------------------------------------------
-# 2.  Create r1 … r7, drop files inside, and submit
-# ---------------------------------------------------------------------------
 for i in $(seq 1 "$NRUNS"); do
     RUNDIR="r${i}"
     echo "▶  Setting up $RUNDIR"
@@ -25,9 +22,6 @@ for i in $(seq 1 "$NRUNS"); do
 
     chmod +x "$RUNDIR/run.sh"
 
-    # -----------------------------------------------------------------------
-    # 3.  Submit
-    # -----------------------------------------------------------------------
     ( cd "$RUNDIR" && sbatch run.sh )
 done
 
