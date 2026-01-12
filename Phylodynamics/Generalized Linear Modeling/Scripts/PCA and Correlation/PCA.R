@@ -36,6 +36,7 @@ colnames(df_num) <- c(
   "Poultry Population",
   "Rainfall",
   "Road Transported Goods",
+  "Sample Size",
   "Temperature",
   "Wind Speed",
   "Laridae Counts",
