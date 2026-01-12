@@ -1,15 +1,13 @@
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(sf)
-  library(rnaturalearth)
-  library(FNN)
-  library(geodist)
-  library(lubridate)
-  library(igraph)
-  library(readr)
-  library(scales)
-  library(grid)
-})
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(FNN)
+library(geodist)
+library(lubridate)
+library(igraph)
+library(readr)
+library(scales)
+library(grid)
 
 sf_use_s2(TRUE)
 
@@ -379,9 +377,7 @@ ggsave(
   bg = "white"
 )
 
-suppressPackageStartupMessages({
-  library(ggalluvial)
-})
+library(ggalluvial)
 
 df_long <- as_tibble(M_SUM0, rownames = "A") |>
   pivot_longer(-A, names_to = "B", values_to = "val") |>
@@ -557,7 +553,6 @@ edges_mig <- tibble(
   dist_km   = as.numeric(DIST_ij2)
 ) %>% filter(jaccard > 0, is.finite(W), W > 0)
 
-# Betweenness backbone (cost = 1/W)
 g_mig <- igraph::graph_from_data_frame(
   d = edges_mig %>%
     mutate(cost = 1 / pmax(W, 1e-9)) %>%
@@ -705,5 +700,3 @@ ggsave(
   units    = "in",
   bg = "white"
 )
-
-message("ALL DONE ✅  (no N–S bias in W; plots labeled by REGION names; TSVs keep GeoCluster codes)")
