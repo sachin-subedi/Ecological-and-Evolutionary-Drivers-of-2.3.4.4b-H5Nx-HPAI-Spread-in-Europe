@@ -1,12 +1,10 @@
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(sf)
-  library(rnaturalearth)
-  library(FNN)
-  library(geodist)
-  library(lubridate)
-  library(readr)
-})
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(FNN)
+library(geodist)
+library(lubridate)
+library(readr)
 
 sf_use_s2(TRUE)
 
@@ -359,11 +357,9 @@ write_matrix_tsv(NM_MEN, file.path(nm_dir, "Anatidae_nonmig_MEANW.tsv"))
 message("✓ Wrote NONMIG matrices (RAW) to: ", nm_dir)
 message("ALL DONE ✅ (Migratory = spring+fall pooled; no radius; RAW only)")
 
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(scales)
-  library(grid)
-})
+library(tidyverse)
+library(scales)
+library(grid)
 
 sum_path_ns <- file.path(out_dir, "season_migratory_raw", "Anatidae_migratory_SUMW.tsv")
 M_SUM_NS <- readr::read_tsv(sum_path_ns, show_col_types = FALSE) |>
@@ -445,12 +441,10 @@ ggsave(
   bg = "white"
 )
 
-suppressPackageStartupMessages({
-  library(tidyverse)
-  library(scales)
-  library(grid)
-  library(ggalluvial)
-})
+library(tidyverse)
+library(scales)
+library(grid)
+library(ggalluvial)
 
 sum_path_ns <- file.path(out_dir, "season_migratory_raw", "Anatidae_migratory_SUMW.tsv")
 M_SUM_NS <- readr::read_tsv(sum_path_ns, show_col_types = FALSE) |>
@@ -512,9 +506,13 @@ ggsave(
   bg = "white"
 )
 
-suppressPackageStartupMessages({
-  library(dplyr); library(sf); library(FNN); library(geodist); library(igraph); library(purrr)
-})
+
+library(dplyr)
+library(sf)
+library(FNN)
+library(geodist)
+library(igraph)
+library(purrr)
 
 nodes_mig0 <- birds_grid %>%
   dplyr::filter(season %in% c("spring","fall")) %>%
@@ -575,7 +573,6 @@ jacc_fun <- function(i, j){
 }
 J_ij <- purrr::map2_dbl(edges_idx$src, edges_idx$dst, jacc_fun)
 
-# 4) Edge weight & cost
 W_ij <- (as.numeric(ANGLE_ij) * J_ij) / pmax(as.numeric(DIST_ij), eps)
 edges_mig <- tibble::tibble(
   source_id = ndf$grid_id[edges_idx$src],
@@ -752,17 +749,14 @@ ggsave(
   bg       = "white"
 )
 
-suppressPackageStartupMessages({
-  library(dplyr)
-  library(readr)
-})
+library(dplyr)
+library(readr)
 
 mig <- birds_grid %>%
   dplyr::filter(season %in% c("spring","fall")) %>%
   sf::st_drop_geometry() %>%
   dplyr::select(grid_id, GeoCluster, genus)
 
-# optional: region label column
 mig <- mig %>% mutate(Region = lab_gc(GeoCluster))
 
 n_cells_total    <- mig %>% distinct(grid_id) %>% nrow()
