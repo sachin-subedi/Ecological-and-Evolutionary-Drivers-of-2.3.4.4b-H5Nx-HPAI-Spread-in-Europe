@@ -1,4 +1,4 @@
-# Ecological and Evolutionary Drivers of 2.3.4.4b H5Nx HPAI Spread Across Species and Geographic Regions in Europe
+# Ecological and Evolutionary Drivers of 2.3.4.4b H5Nx HPAI Spread in Europe 
 
 Sachin Subedi¹˒², M. H. M. Mubassir¹˒², Tanin Rajamand¹˒², Mohamed Bakheet²˒³,Ludy Registre Carmola²˒³,  Leke Lyu⁵, Oluwatosin Babasola²˒³, Sihua Peng²˒³, Yangfan Liu⁶,  
 Carsten Kirkeby⁶ and Justin Bahl¹˒²˒³˒⁴\*
