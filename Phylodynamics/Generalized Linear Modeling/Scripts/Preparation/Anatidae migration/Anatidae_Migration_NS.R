@@ -674,7 +674,7 @@ p <- ggplot() +
     shape = 21, color = "black", stroke = 0.25, alpha = 0.95
   ) +
   scale_linewidth_continuous(
-    name   = "Corridor strength (relative within cluster)",
+    name   = "Corridor strength (relative within region)",
     breaks = c(0.7, 1.2, 1.7, 2.2),
     labels = c("weak", "moderate", "strong", "very strong"),
     range  = c(0.6, 2.2)
