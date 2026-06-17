@@ -1,5 +1,55 @@
 import pandas as pd
 
+hc_cluster_map = {
+    "HC_Cluster_1_Alpine":          ["CHE"],
+    "HC_Cluster_1_Atlantic":        ["BEL", "FRA", "NLD", "GBR", "ISL", "IRL"],
+    "HC_Cluster_1_Continental":     ["DEU", "LUX"],
+    "HC_Cluster_2_Alpine":          ["AUT", "SVK", "BIH"],
+    "HC_Cluster_2_Continental":     ["BGR", "HRV", "CZE", "XKX", "MDA", "POL",
+                                     "ROU", "SVN", "DNK", "MKD", "SRB", "UKR"],
+    "HC_Cluster_2_Mediterranean":   ["ALB", "GRC", "ITA", "CYP"],
+    "HC_Cluster_2_Pannonian":       ["HUN"],
+    "HC_Cluster_3_Alpine":          ["NOR"],
+    "HC_Cluster_3_Boreal":          ["EST", "FIN", "LVA", "LTU", "SWE"],
+    "HC_Cluster_4_Mediterranean":   ["ESP", "PRT"],
+}
+
+iso3_to_iso2 = {
+    "ALB": "AL", "AUT": "AT", "BEL": "BE", "BIH": "BA", "BGR": "BG",
+    "CHE": "CH", "CYP": "CY", "CZE": "CZ", "DEU": "DE", "DNK": "DK",
+    "ESP": "ES", "EST": "EE", "FIN": "FI", "FRA": "FR", "GBR": "UK",
+    "GRC": "EL", "HRV": "HR", "HUN": "HU", "IRL": "IE", "ISL": "IS",
+    "ITA": "IT", "XKX": "XK", "LTU": "LT", "LUX": "LU", "LVA": "LV",
+    "MDA": "MD", "MKD": "MK", "MNE": "ME", "NLD": "NL", "NOR": "NO",
+    "POL": "PL", "PRT": "PT", "ROU": "RO", "SRB": "RS", "SVK": "SK",
+    "SVN": "SI", "SWE": "SE", "UKR": "UA", "BLR": "BY",
+}
+
+hc_cluster_lookup = [
+    (iso3_to_iso2[iso3], cluster)
+    for cluster, iso3_list in hc_cluster_map.items()
+    for iso3 in iso3_list
+    if iso3 in iso3_to_iso2
+]
+hc_cluster_df = pd.DataFrame(hc_cluster_lookup, columns=["country_code", "HC_Cluster"])
+
+country_lookup = pd.DataFrame([
+    ("AL", "Albania"),          ("AT", "Austria"),          ("BE", "Belgium"),
+    ("BA", "Bosnia and Herzegovina"), ("BG", "Bulgaria"),   ("BY", "Belarus"),
+    ("CH", "Switzerland"),      ("CY", "Cyprus"),            ("CZ", "Czechia"),
+    ("DE", "Germany"),          ("DK", "Denmark"),           ("EE", "Estonia"),
+    ("EL", "Greece"),           ("ES", "Spain"),             ("FI", "Finland"),
+    ("FR", "France"),           ("HR", "Croatia"),           ("HU", "Hungary"),
+    ("IE", "Ireland"),          ("IS", "Iceland"),           ("IT", "Italy"),
+    ("LT", "Lithuania"),        ("LU", "Luxembourg"),        ("LV", "Latvia"),
+    ("MD", "Moldova"),          ("ME", "Montenegro"),        ("MK", "North Macedonia"),
+    ("NL", "Netherlands"),      ("NO", "Norway"),
+    ("PL", "Poland"),           ("PT", "Portugal"),          ("RO", "Romania"),
+    ("RS", "Serbia"),           ("SE", "Sweden"),            ("SI", "Slovenia"),
+    ("SK", "Slovakia"),         ("UK", "United Kingdom"),    ("UA", "Ukraine"),
+    ("XK", "Kosovo"),
+], columns=["country_code", "Country"])
+
 file_path = "estat_ttr00005.tsv"
 df = pd.read_csv(file_path, sep='\t')
 
@@ -13,55 +63,34 @@ for col in year_cols:
 
 df['avg_2016_2024'] = df[year_cols].mean(axis=1, skipna=True)
 
-df['country_code'] = df['geo_code'].str[:2]
+df['country_code'] = df['geo_code'].str.strip().str[:2]
 
 country_sum = df.groupby('country_code', as_index=False)['avg_2016_2024'].sum()
 country_sum.rename(columns={'avg_2016_2024': 'road_transported_goods'}, inplace=True)
 
 country_sum = country_sum[~country_sum['country_code'].isin(['TR', 'MT'])]
 
-country_lookup = pd.DataFrame([
-    ("AT", "Austria"), ("BE", "Belgium"), ("BG", "Bulgaria"), ("CH", "Switzerland"),
-    ("CY", "Cyprus"), ("CZ", "Czechia"), ("DE", "Germany"), ("DK", "Denmark"),
-    ("EE", "Estonia"), ("EL", "Greece"), ("ES", "Spain"), ("FI", "Finland"),
-    ("FR", "France"), ("HR", "Croatia"), ("HU", "Hungary"), ("IE", "Ireland"),
-    ("IS", "Iceland"), ("IT", "Italy"), ("LT", "Lithuania"), ("LU", "Luxembourg"),
-    ("LV", "Latvia"), ("ME", "Montenegro"), ("MK", "North Macedonia"),
-    ("NL", "Netherlands"), ("PL", "Poland"), ("PT", "Portugal"), ("RO", "Romania"),
-    ("RS", "Serbia"), ("SE", "Sweden"), ("SI", "Slovenia"), ("SK", "Slovakia"),
-    ("UK", "United Kingdom"), ("XK", "Kosovo")
-], columns=["country_code", "Country"])
+for code, label in [("NO", "Norway"), ("CH", "Switzerland")]:
+    if code not in country_sum["country_code"].values:
+        row = pd.DataFrame([{"country_code": code, "road_transported_goods": 0.0000001}])
+        country_sum = pd.concat([country_sum, row], ignore_index=True)
+        print(f"ℹ️  {label} ('{code}') not found in Eurostat data — injected as 0.0000001")
 
-merged_df = country_sum.merge(country_lookup, on="country_code", how="left")
+country_sum = country_sum.merge(country_lookup, on="country_code", how="left")
 
-cluster_map = {
-    "GeoCluster_One": [
-        "Albania", "Bulgaria", "Cyprus", "Greece", "Kosovo", "North Macedonia", "Serbia", "Romania"
-    ],
-    "GeoCluster_Two": [
-        "Hungary", "Slovakia", "Poland", "Ukraine", "Moldova", "Belarus"
-    ],
-    "GeoCluster_Three": [
-        "Denmark", "France", "Belgium", "Germany", "Iceland", "Ireland", "Luxembourg",
-        "Netherlands", "Portugal", "Spain", "Switzerland", "United Kingdom"
-    ],
-    "GeoCluster_Four": [
-        "Estonia", "Finland", "Latvia", "Lithuania", "Norway", "Sweden"
-    ],
-    "GeoCluster_Five": [
-        "Austria", "Montenegro", "Bosnia and Herz.", "Croatia", "Czechia", "Italy", "Slovenia"
-    ]
-}
+merged = country_sum.merge(hc_cluster_df, on="country_code", how="left")
 
-geo_cluster_lookup = []
-for cluster, countries in cluster_map.items():
-    for country in countries:
-        geo_cluster_lookup.append((country, cluster))
-geo_cluster_df = pd.DataFrame(geo_cluster_lookup, columns=["Country", "GeoCluster"])
+unmatched = merged[merged["HC_Cluster"].isna()]["country_code"].tolist()
+if unmatched:
+    print(f"⚠️  No HC cluster assigned for country_codes: {unmatched}")
 
-merged_with_cluster = merged_df.merge(geo_cluster_df, on="Country", how="left")
+hc_summary = (
+    merged
+    .dropna(subset=["HC_Cluster"])
+    .groupby("HC_Cluster", as_index=False)["road_transported_goods"]
+    .sum()
+    .rename(columns={"road_transported_goods": "Road_Transported_Goods"})
+)
 
-cluster_summary = merged_with_cluster.groupby('GeoCluster', as_index=False)['road_transported_goods'].sum()
-cluster_summary.rename(columns={'road_transported_goods': 'road_transported_goods'}, inplace=True)
-
-cluster_summary.to_csv("GeoCluster_road_transported_goods.tsv", sep='\t', index=False)
+output_file = "HC_GeoCluster_Road_Transported_Goods.tsv"
+hc_summary.to_csv(output_file, sep='\t', index=False)
