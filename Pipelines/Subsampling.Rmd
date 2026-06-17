@@ -1,0 +1,1136 @@
+---
+title: "Subsampling"
+author: "Sachin Subedi"
+date: "2026-04-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+#Set Working Directory
+```{r}
+setwd("~/data/")
+```
+
+### Loading data for subsampling
+```{r}
+data <- read.delim("final_seq_data_updated.tsv", sep="\t", stringsAsFactors=FALSE)
+colnames(data)
+```
+
+```{r}
+library(lubridate)
+data <- data %>%
+  mutate(
+    Year = year(Collection_Date_Final)
+  )
+selected_locations <- unique(data$Country)
+selected_years     <- unique(data$Year)
+selected_habitats  <- unique(data$Habitat)
+```
+
+### Stratified subsampling
+
+```{r}
+library(dplyr)
+
+subsample_and_save <- function(data, seed, label, max_samples = 2) {
+  set.seed(seed)
+
+  if (!dir.exists("stratified")) dir.create("stratified")
+
+  subsampled_data <- data %>%
+    group_by(Country, Year, Habitat) %>%
+    group_modify(function(.x, .y) {
+      if (nrow(.x) <= max_samples) {
+        return(.x)
+      } else {
+        return(slice_sample(.x, n = max_samples))
+      }
+    }) %>%
+    ungroup()
+
+  subsampled_counts <- subsampled_data %>%
+    group_by(Country, Year, Habitat) %>%
+    summarise(isolate_count = n_distinct(Isolate_Id), .groups = "drop")
+
+  cat("\n==========", label, "==========\n")
+  print(subsampled_counts)
+  print(table(subsampled_data$Country))
+  print(table(subsampled_data$Year))
+  print(table(subsampled_data$Habitat))
+
+  sub_dir <- file.path("stratified", label)
+  if (!dir.exists(sub_dir)) dir.create(sub_dir)
+
+  out_file <- file.path(sub_dir, paste0(label, ".tsv"))
+  write.table(subsampled_data, out_file, sep = "\t", row.names = FALSE, quote = FALSE)
+
+  return(list(data = subsampled_data, counts = subsampled_counts))
+}
+
+subsampled1 <- subsample_and_save(data, seed = 2324, label = "rep1_stratified")
+```
+
+
+### Plotting of stratified subsample
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(scales)
+library(patchwork)
+library(readxl)
+
+required_seq  <- "final_seq_data_updated.tsv"
+required_case <- "Latest Reported Events.xlsx"
+
+if (!file.exists(required_seq))  stop("Missing final_seq_data_updated.tsv in parent dir")
+if (!file.exists(required_case)) stop("Missing Latest Reported Events.xlsx in parent dir")
+
+base_dir <- getwd()
+
+d       <- "rep1_stratified"
+run_dir <- file.path(base_dir, "stratified", d)
+run_tsv <- file.path(run_dir, paste0(d, ".tsv"))
+if (!file.exists(run_tsv)) stop("Missing subsample file: ", run_tsv)
+
+message("Running plots in: ", d)
+
+full_raw      <- read.delim(file.path(base_dir, required_seq), sep = "\t", stringsAsFactors = FALSE)
+subsample_raw <- read.delim(run_tsv, sep = "\t", stringsAsFactors = FALSE)
+case_raw      <- read_excel(file.path(base_dir, required_case))
+
+full_raw <- full_raw %>%
+  mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+         Year = lubridate::year(Collection_Date_Final))
+
+subsample_raw <- subsample_raw %>%
+  mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+         Year = lubridate::year(Collection_Date_Final))
+
+case_europe <- case_raw %>%
+  mutate(Year = lubridate::year(as.Date(`observation date`))) %>%
+  group_by(Year) %>%
+  summarise(total_cases = dplyr::n_distinct(`Event ID`), .groups = "drop")
+
+hab_pal <- c(
+  Coastal="#0072B2", Farm="#CD5C5C", Forest="#BCBD22", Grassland="#26A69A",
+  `Human_Modified`="#56B4E9", Marine="#CC79A7", Shrubland="lightslategray",
+  Urban="#E6842A", Others="#000000", Woodland="#6B4C1B", Rock="#7570B3", Wetland="#006D2C"
+)
+
+clean_hab <- function(df) df %>%
+  mutate(Habitat = trimws(Habitat),
+         Habitat = ifelse(Habitat %in% names(hab_pal), Habitat, "Others"))
+
+full_hab <- clean_hab(full_raw)
+sub_hab  <- clean_hab(subsample_raw)
+
+hab_counts_full <- full_hab %>%
+  group_by(Year, Habitat) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+hab_counts_sub <- sub_hab %>%
+  group_by(Year, Habitat) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_hab_full <- max(hab_counts_full$n_isolates, na.rm = TRUE) / max(hab_counts_full$total_cases, na.rm = TRUE)
+scale_hab_sub  <- max(hab_counts_sub$n_isolates,  na.rm = TRUE) / max(hab_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_hab <- function(df, sf, ttl){
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = Habitat),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(values = hab_pal, drop = FALSE) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal")
+}
+
+p_hab_full <- plot_hab(hab_counts_full, scale_hab_full, "Isolates & Cases by Habitat (Full Data)")
+p_hab_sub  <- plot_hab(hab_counts_sub,  scale_hab_sub,  "Isolates & Cases by Habitat (Subsample)")
+
+combined_hab <- (p_hab_full / p_hab_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+type_pal <- c(
+  Domestic_Mammal="#6A3D9A", Domestic_Bird="#CD5C5C",
+  Wild_Mammal="#BCBD22", Human="#1B9E77", Wild_Bird="#3C5488", Others="#000000"
+)
+
+clean_type <- function(df) df %>%
+  mutate(Type = trimws(Type),
+         Type = ifelse(Type %in% names(type_pal), Type, "Others"))
+
+full_type <- clean_type(full_raw)
+sub_type  <- clean_type(subsample_raw)
+
+type_counts_full <- full_type %>%
+  group_by(Year, Type) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+type_counts_sub <- sub_type %>%
+  group_by(Year, Type) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_type_full <- max(type_counts_full$n_isolates, na.rm = TRUE) / max(type_counts_full$total_cases, na.rm = TRUE)
+scale_type_sub  <- max(type_counts_sub$n_isolates,  na.rm = TRUE) / max(type_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_type <- function(df, sf, ttl){
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = Type),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(values = type_pal, name = "Host", drop = FALSE) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal")
+}
+
+p_type_full <- plot_type(type_counts_full, scale_type_full, "Isolates & Cases by Host Type (Full Data)")
+p_type_sub  <- plot_type(type_counts_sub,  scale_type_sub,  "Isolates & Cases by Host Type (Subsample)")
+
+combined_type <- (p_type_full / p_type_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+hc_cols <- c(
+  HC_Cluster_1_Alpine = "#0072B2",
+  HC_Cluster_1_Arctic = "#8DA0CB",
+  HC_Cluster_1_Atlantic = "#CD5C5C",
+  HC_Cluster_1_Continental = "#BCBD22",
+  HC_Cluster_2_Alpine = "#26A69A",
+  HC_Cluster_2_Continental = "#CC79A7",
+  HC_Cluster_2_Mediterranean = "lightslategray",
+  HC_Cluster_2_Pannonian = "#6B4C1B",
+  HC_Cluster_3_Alpine = "#7570B3",
+  HC_Cluster_3_Boreal = "#006D2C",
+  HC_Cluster_4_Mediterranean = "#56B4E9"
+)
+
+hc_bio_levels <- sort(unique(na.omit(trimws(as.character(full_raw$HC_Bio_Combined)))))
+hc_bio_levels <- hc_bio_levels[hc_bio_levels != ""]
+if (length(hc_bio_levels) == 0) stop("No non-missing values found in HC_Bio_Combined")
+
+clean_hc_bio <- function(df) {
+  df %>%
+    mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+    filter(
+      !is.na(HC_Bio_Combined),
+      nzchar(HC_Bio_Combined),
+      HC_Bio_Combined %in% names(hc_cols)
+    )
+}
+
+full_hc_bio <- clean_hc_bio(full_raw)
+sub_hc_bio  <- clean_hc_bio(subsample_raw)
+if (nrow(full_hc_bio) == 0) {
+  stop("No rows left after matching HC_Bio_Combined to hc_cols (check labels match pipeline 7C, underscore form).")
+}
+
+hc_bio_counts_full <- full_hc_bio %>%
+  group_by(Year, HC_Bio_Combined) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+hc_bio_counts_sub <- sub_hc_bio %>%
+  group_by(Year, HC_Bio_Combined) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_hc_bio_full <- max(hc_bio_counts_full$n_isolates, na.rm = TRUE) / max(hc_bio_counts_full$total_cases, na.rm = TRUE)
+scale_hc_bio_sub  <- max(hc_bio_counts_sub$n_isolates,  na.rm = TRUE) / max(hc_bio_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_hc_bio <- function(df, sf, ttl){
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = HC_Bio_Combined),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(
+      values = hc_cols,
+      name   = "HC_Bio_Combined",
+      drop   = FALSE,
+      breaks = names(hc_cols)
+    ) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal") +
+    guides(fill = guide_legend(ncol = 3))
+}
+
+p_hc_bio_full <- plot_hc_bio(hc_bio_counts_full, scale_hc_bio_full, "Isolates & Cases by HC_Bio_Combined (Full Data)")
+p_hc_bio_sub  <- plot_hc_bio(hc_bio_counts_sub,  scale_hc_bio_sub,  "Isolates & Cases by HC_Bio_Combined (Subsample)")
+
+combined_hc_bio <- (p_hc_bio_full / p_hc_bio_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+ggsave(file.path(run_dir, paste0("Habitat_", d, ".png")),
+       combined_hab,  width = 14, height = 9, dpi = 300, bg = "transparent")
+ggsave(file.path(run_dir, paste0("Habitat_", d, ".pdf")),
+       combined_hab,  width = 14, height = 9)
+
+ggsave(file.path(run_dir, paste0("Host_", d, ".png")),
+       combined_type, width = 14, height = 9, dpi = 300)
+ggsave(file.path(run_dir, paste0("Host_", d, ".pdf")),
+       combined_type, width = 14, height = 9)
+
+ggsave(file.path(run_dir, paste0("HC_Bio_Combined_", d, ".png")),
+       combined_hc_bio, width = 14, height = 9, dpi = 300)
+ggsave(file.path(run_dir, paste0("HC_Bio_Combined_", d, ".pdf")),
+       combined_hc_bio, width = 14, height = 9)
+```
+
+
+### Equal subsampling
+
+```{r hc-bio-class-subsample}
+library(dplyr)
+
+if (!"HC_Bio_Combined" %in% names(data)) {
+  stop("Column HC_Bio_Combined not found in data — add it in the pipeline or TSV.")
+}
+
+n_per_class <- 130L
+
+sample_by_hc_bio_class <- function(df, n_take, seed) {
+  set.seed(seed)
+  df %>%
+    mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+    filter(!is.na(HC_Bio_Combined), nzchar(HC_Bio_Combined)) %>%
+    group_by(HC_Bio_Combined) %>%
+    group_modify(function(.x, .y) {
+      if (nrow(.x) == 0L) {
+        return(.x)
+      }
+      k <- min(n_take, nrow(.x))
+      dplyr::slice_sample(.x, n = k, replace = FALSE)
+    }) %>%
+    ungroup()
+}
+
+if (!dir.exists("equal")) dir.create("equal")
+
+rep_label <- "rep1_equal"
+out_dir   <- file.path("equal", rep_label)
+if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+sub_i <- sample_by_hc_bio_class(data, n_take = n_per_class, seed = 2324L)
+
+counts_i <- sub_i %>%
+  count(HC_Bio_Combined, name = "n_sampled")
+
+cat("\n========== HC_Bio_Combined equal sample:", rep_label, "==========\n")
+print(counts_i, n = 100)
+cat("Total sequences:", nrow(sub_i), "\n")
+
+out_tsv <- file.path(out_dir, paste0(rep_label, ".tsv"))
+write.table(sub_i, out_tsv, sep = "\t", row.names = FALSE, quote = FALSE)
+message("Wrote ", out_tsv)
+```
+
+### Plotting equal subsample
+
+```{r class-subsample-plots}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(scales)
+library(patchwork)
+library(readxl)
+
+required_seq  <- "final_seq_data_updated.tsv"
+required_case <- "Latest Reported Events.xlsx"
+
+if (!file.exists(required_seq))  stop("Missing final_seq_data_updated.tsv in parent dir")
+if (!file.exists(required_case)) stop("Missing Latest Reported Events.xlsx in parent dir")
+
+base_dir <- getwd()
+
+d       <- "rep1_equal"
+run_dir <- file.path(base_dir, "equal", d)
+run_tsv <- file.path(run_dir, paste0(d, ".tsv"))
+if (!file.exists(run_tsv)) {
+  stop("Missing equal subsample file: ", run_tsv, " — run the hc-bio-class-subsample chunk first.")
+}
+
+message("Running equal subsample plots in: ", d)
+
+full_raw      <- read.delim(file.path(base_dir, required_seq), sep = "\t", stringsAsFactors = FALSE)
+subsample_raw <- read.delim(run_tsv, sep = "\t", stringsAsFactors = FALSE)
+case_raw      <- read_excel(file.path(base_dir, required_case))
+
+full_raw <- full_raw %>%
+  mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+         Year = lubridate::year(Collection_Date_Final))
+
+subsample_raw <- subsample_raw %>%
+  mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+         Year = lubridate::year(Collection_Date_Final))
+
+case_europe <- case_raw %>%
+  mutate(Year = lubridate::year(as.Date(`observation date`))) %>%
+  group_by(Year) %>%
+  summarise(total_cases = dplyr::n_distinct(`Event ID`), .groups = "drop")
+
+hab_pal <- c(
+  Coastal = "#0072B2", Farm = "#CD5C5C", Forest = "#BCBD22", Grassland = "#26A69A",
+  `Human_Modified` = "#56B4E9", Marine = "#CC79A7", Shrubland = "lightslategray",
+  Urban = "#E6842A", Others = "#000000", Woodland = "#6B4C1B", Rock = "#7570B3", Wetland = "#006D2C"
+)
+
+clean_hab <- function(df) df %>%
+  mutate(Habitat = trimws(Habitat),
+         Habitat = ifelse(Habitat %in% names(hab_pal), Habitat, "Others"))
+
+full_hab <- clean_hab(full_raw)
+sub_hab  <- clean_hab(subsample_raw)
+
+hab_counts_full <- full_hab %>%
+  group_by(Year, Habitat) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+hab_counts_sub <- sub_hab %>%
+  group_by(Year, Habitat) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_hab_full <- max(hab_counts_full$n_isolates, na.rm = TRUE) / max(hab_counts_full$total_cases, na.rm = TRUE)
+scale_hab_sub  <- max(hab_counts_sub$n_isolates,  na.rm = TRUE) / max(hab_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_hab <- function(df, sf, ttl) {
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = Habitat),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(values = hab_pal, drop = FALSE) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal")
+}
+
+p_hab_full <- plot_hab(hab_counts_full, scale_hab_full, "Isolates & Cases by Habitat (Full Data)")
+p_hab_sub  <- plot_hab(hab_counts_sub,  scale_hab_sub,
+                       "Isolates & Cases by Habitat (Equal subsample)")
+
+combined_hab <- (p_hab_full / p_hab_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+type_pal <- c(
+  Domestic_Mammal = "#6A3D9A", Domestic_Bird = "#CD5C5C",
+  Wild_Mammal = "#BCBD22", Human = "#1B9E77", Wild_Bird = "#3C5488", Others = "#000000"
+)
+
+clean_type <- function(df) df %>%
+  mutate(Type = trimws(Type),
+         Type = ifelse(Type %in% names(type_pal), Type, "Others"))
+
+full_type <- clean_type(full_raw)
+sub_type  <- clean_type(subsample_raw)
+
+type_counts_full <- full_type %>%
+  group_by(Year, Type) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+type_counts_sub <- sub_type %>%
+  group_by(Year, Type) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_type_full <- max(type_counts_full$n_isolates, na.rm = TRUE) / max(type_counts_full$total_cases, na.rm = TRUE)
+scale_type_sub  <- max(type_counts_sub$n_isolates,  na.rm = TRUE) / max(type_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_type <- function(df, sf, ttl) {
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = Type),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(values = type_pal, name = "Host", drop = FALSE) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal")
+}
+
+p_type_full <- plot_type(type_counts_full, scale_type_full, "Isolates & Cases by Host Type (Full Data)")
+p_type_sub  <- plot_type(type_counts_sub,  scale_type_sub,
+                         "Isolates & Cases by Host Type (Equal subsample)")
+
+combined_type <- (p_type_full / p_type_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+hc_cols <- c(
+  HC_Cluster_1_Alpine = "#0072B2",
+  HC_Cluster_1_Arctic = "#8DA0CB",
+  HC_Cluster_1_Atlantic = "#CD5C5C",
+  HC_Cluster_1_Continental = "#BCBD22",
+  HC_Cluster_2_Alpine = "#26A69A",
+  HC_Cluster_2_Continental = "#CC79A7",
+  HC_Cluster_2_Mediterranean = "lightslategray",
+  HC_Cluster_2_Pannonian = "#6B4C1B",
+  HC_Cluster_3_Alpine = "#7570B3",
+  HC_Cluster_3_Boreal = "#006D2C",
+  HC_Cluster_4_Mediterranean = "#56B4E9"
+)
+
+clean_hc_bio <- function(df) {
+  df %>%
+    mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+    filter(
+      !is.na(HC_Bio_Combined),
+      nzchar(HC_Bio_Combined),
+      HC_Bio_Combined %in% names(hc_cols)
+    )
+}
+
+full_hc_bio <- clean_hc_bio(full_raw)
+sub_hc_bio  <- clean_hc_bio(subsample_raw)
+if (nrow(full_hc_bio) == 0) {
+  stop("No rows left after matching HC_Bio_Combined to hc_cols (check labels match pipeline 7C, underscore form).")
+}
+
+hc_bio_counts_full <- full_hc_bio %>%
+  group_by(Year, HC_Bio_Combined) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+hc_bio_counts_sub <- sub_hc_bio %>%
+  group_by(Year, HC_Bio_Combined) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_hc_bio_full <- max(hc_bio_counts_full$n_isolates, na.rm = TRUE) / max(hc_bio_counts_full$total_cases, na.rm = TRUE)
+scale_hc_bio_sub  <- max(hc_bio_counts_sub$n_isolates,  na.rm = TRUE) / max(hc_bio_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_hc_bio <- function(df, sf, ttl) {
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = HC_Bio_Combined),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(
+      values = hc_cols,
+      name   = "HC_Bio_Combined",
+      drop   = FALSE,
+      breaks = names(hc_cols)
+    ) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal") +
+    guides(fill = guide_legend(ncol = 3))
+}
+
+p_hc_bio_full <- plot_hc_bio(hc_bio_counts_full, scale_hc_bio_full,
+                             "Isolates & Cases by HC_Bio_Combined (Full Data)")
+p_hc_bio_sub  <- plot_hc_bio(hc_bio_counts_sub,  scale_hc_bio_sub,
+                             "Isolates & Cases by HC_Bio_Combined (Equal subsample)")
+
+combined_hc_bio <- (p_hc_bio_full / p_hc_bio_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+ggsave(file.path(run_dir, paste0("Habitat_", d, ".png")),
+       combined_hab,  width = 14, height = 9, dpi = 300, bg = "transparent")
+ggsave(file.path(run_dir, paste0("Habitat_", d, ".pdf")),
+       combined_hab,  width = 14, height = 9)
+
+ggsave(file.path(run_dir, paste0("Host_", d, ".png")),
+       combined_type, width = 14, height = 9, dpi = 300)
+ggsave(file.path(run_dir, paste0("Host_", d, ".pdf")),
+       combined_type, width = 14, height = 9)
+
+ggsave(file.path(run_dir, paste0("HC_Bio_Combined_", d, ".png")),
+       combined_hc_bio, width = 14, height = 9, dpi = 300)
+ggsave(file.path(run_dir, paste0("HC_Bio_Combined_", d, ".pdf")),
+       combined_hc_bio, width = 14, height = 9)
+
+message("Equal subsample plots finished.")
+```
+
+### Proportional subsampling
+
+```{r hc-bio-proportional-subsample}
+library(dplyr)
+library(readxl)
+
+if (!"HC_Bio_Combined" %in% names(data)) {
+  stop("Column HC_Bio_Combined not found in data — add it in the pipeline or TSV.")
+}
+
+hc_bio_ten_classes <- c(
+  "HC_Cluster_1_Alpine",
+  "HC_Cluster_1_Atlantic",
+  "HC_Cluster_1_Continental",
+  "HC_Cluster_2_Alpine",
+  "HC_Cluster_2_Continental",
+  "HC_Cluster_2_Mediterranean",
+  "HC_Cluster_2_Pannonian",
+  "HC_Cluster_3_Alpine",
+  "HC_Cluster_3_Boreal",
+  "HC_Cluster_4_Mediterranean"
+)
+
+target_n_proportional    <- 1200L
+min_sequences_per_stratum <- 20L
+
+required_case_prop <- "Latest Reported Events.xlsx"
+if (!file.exists(required_case_prop)) {
+  stop("Missing ", required_case_prop)
+}
+
+case_raw_prop <- read_excel(required_case_prop)
+if (!all(c("Event ID", "observation date") %in% names(case_raw_prop))) {
+  stop(required_case_prop, " must contain columns 'Event ID' and 'observation date'.")
+}
+
+dominant_hc_by_country <- data %>%
+  mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+  filter(!is.na(HC_Bio_Combined), nzchar(HC_Bio_Combined)) %>%
+  count(Country, HC_Bio_Combined, name = "n_iso") %>%
+  group_by(Country) %>%
+  slice_max(order_by = n_iso, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  dplyr::select(Country, HC_Bio_Combined)
+
+idx_hc <- which(tolower(names(case_raw_prop)) == "hc_bio_combined")
+hc_col_direct <- if (length(idx_hc)) names(case_raw_prop)[idx_hc[1]] else NA_character_
+if (is.na(hc_col_direct)) {
+  idx_hc2 <- which(grepl("HC_Bio", names(case_raw_prop), ignore.case = TRUE) &
+    grepl("Combined", names(case_raw_prop), ignore.case = TRUE))
+  hc_col_direct <- if (length(idx_hc2)) names(case_raw_prop)[idx_hc2[1]] else NA_character_
+}
+
+if (!is.na(hc_col_direct) && nzchar(hc_col_direct)) {
+  tagged_events <- case_raw_prop %>%
+    mutate(
+      Event_ID = .data[["Event ID"]],
+      HC_Bio_Combined = trimws(as.character(.data[[hc_col_direct]]))
+    ) %>%
+    filter(!is.na(HC_Bio_Combined), nzchar(HC_Bio_Combined))
+  cat("Mapping events to HC_Bio_Combined using Excel column:", hc_col_direct, "\n")
+} else {
+  country_col <- intersect(names(case_raw_prop), c("Country", "country", "Reporting country"))[1]
+  if (is.na(country_col) || !nzchar(country_col)) {
+    country_col <- names(case_raw_prop)[grepl("^country$", names(case_raw_prop), ignore.case = TRUE)][1]
+  }
+  if (is.na(country_col) || !nzchar(country_col)) {
+    stop(
+      "No HC_Bio_Combined column found in ", required_case_prop,
+      " and no Country column — add HC_Bio_Combined or Country to map events to regions."
+    )
+  }
+  tagged_events <- case_raw_prop %>%
+    mutate(
+      Event_ID = .data[["Event ID"]],
+      Country = trimws(as.character(.data[[country_col]]))
+    ) %>%
+    left_join(dominant_hc_by_country, by = "Country") %>%
+    filter(!is.na(HC_Bio_Combined))
+  cat("Mapping events to HC_Bio_Combined via Country column:", country_col, "\n")
+}
+
+case_by_hc <- tagged_events %>%
+  distinct(Event_ID, HC_Bio_Combined) %>%
+  count(HC_Bio_Combined, name = "n_cases")
+
+seq_avail <- data %>%
+  mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+  filter(!is.na(HC_Bio_Combined), nzchar(HC_Bio_Combined)) %>%
+  group_by(HC_Bio_Combined) %>%
+  summarise(n_seq = dplyr::n_distinct(Isolate_Id), .groups = "drop")
+
+alloc_base <- tibble(HC_Bio_Combined = hc_bio_ten_classes) %>%
+  left_join(case_by_hc, by = "HC_Bio_Combined") %>%
+  mutate(n_cases = dplyr::coalesce(n_cases, 0L)) %>%
+  left_join(seq_avail, by = "HC_Bio_Combined") %>%
+  mutate(n_seq = dplyr::coalesce(n_seq, 0L))
+
+missing_seq <- alloc_base %>% filter(n_seq < 1L)
+if (nrow(missing_seq) > 0L) {
+  stop(
+    "All 10 HC_Bio_Combined strata need >=1 sequence in main data. Missing:\n",
+    paste(missing_seq$HC_Bio_Combined, collapse = ", ")
+  )
+}
+
+if (sum(alloc_base$n_cases) < 1L) {
+  stop("No epidemic cases mapped to the 10 strata — check Excel and country/HC labels.")
+}
+
+short_strata <- alloc_base %>% filter(n_seq < min_sequences_per_stratum)
+if (nrow(short_strata) > 0L) {
+  cat(
+    "\nWarning: strata with fewer than", min_sequences_per_stratum,
+    "isolates will be fully sampled (cannot apply floor of 20):\n"
+  )
+  print(short_strata %>% dplyr::select(HC_Bio_Combined, n_seq), n = 20)
+}
+
+base_floor <- pmin(min_sequences_per_stratum, alloc_base$n_seq)
+if (sum(base_floor) > target_n_proportional) {
+  stop(
+    "Sum of per-stratum floors (", sum(base_floor),
+    ") exceeds target_n_proportional (", target_n_proportional,
+    "). Increase target_n_proportional or lower min_sequences_per_stratum."
+  )
+}
+
+remaining <- target_n_proportional - sum(base_floor)
+w <- as.numeric(alloc_base$n_cases)
+exact_extra <- (w / sum(w)) * remaining
+q_extra <- floor(exact_extra)
+while (sum(q_extra) < remaining) {
+  gap <- exact_extra - q_extra
+  j <- which.max(gap)
+  q_extra[j] <- q_extra[j] + 1L
+}
+
+q <- as.integer(base_floor + q_extra)
+alloc_base$quota <- q
+alloc_base$base_floor <- as.integer(base_floor)
+alloc_base$quota_epidemic_extra <- as.integer(q_extra)
+
+quota_tbl <- alloc_base %>%
+  mutate(
+    weight_cases = n_cases / sum(n_cases),
+    quota_capped = pmin(quota, n_seq),
+    shortfall = quota - quota_capped
+  )
+
+cat(
+  "\n--- Epidemic-weighted allocation (target =", target_n_proportional,
+  "; floor =", min_sequences_per_stratum, "per stratum when possible; remainder proportional to cases) ---\n"
+)
+print(
+  quota_tbl %>%
+    dplyr::select(
+      HC_Bio_Combined, n_cases, weight_cases, n_seq,
+      base_floor, quota_epidemic_extra, quota, quota_capped
+    ),
+  n = 20
+)
+if (any(quota_tbl$shortfall > 0, na.rm = TRUE)) {
+  cat("Note: quota exceeded available isolates in some strata; capped (see quota_capped). Final row sum may be < target.\n")
+}
+
+sample_hc_bio_proportional <- function(df, quotas_df, seed) {
+  set.seed(seed)
+  quotas_df <- quotas_df %>%
+    dplyr::select(HC_Bio_Combined, quota_capped) %>%
+    dplyr::rename(quota = quota_capped)
+  df %>%
+    mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+    filter(!is.na(HC_Bio_Combined), nzchar(HC_Bio_Combined)) %>%
+    semi_join(quotas_df, by = "HC_Bio_Combined") %>%
+    group_by(HC_Bio_Combined) %>%
+    group_modify(function(.x, .y) {
+      qtake <- quotas_df$quota[quotas_df$HC_Bio_Combined == .y$HC_Bio_Combined[1]]
+      if (length(qtake) == 0L || qtake == 0L || nrow(.x) == 0L) {
+        return(.x[0, ])
+      }
+      k <- min(as.integer(qtake), nrow(.x))
+      dplyr::slice_sample(.x, n = k, replace = FALSE)
+    }) %>%
+    ungroup()
+}
+
+if (!dir.exists("proportional")) dir.create("proportional")
+
+rep_label <- "rep1_proportional"
+out_dir   <- file.path("proportional", rep_label)
+if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+sub_p <- sample_hc_bio_proportional(data, quota_tbl, seed = 2324L)
+
+cat("\n========== HC_Bio_Combined proportional sample:", rep_label, "==========\n")
+print(count(sub_p, HC_Bio_Combined, name = "n_sampled"), n = 100)
+cat("Total sequences:", nrow(sub_p), "\n")
+
+write.table(
+  quota_tbl,
+  file.path(out_dir, "proportional_allocation.tsv"),
+  sep = "\t", row.names = FALSE, quote = FALSE
+)
+out_tsv <- file.path(out_dir, paste0(rep_label, ".tsv"))
+write.table(sub_p, out_tsv, sep = "\t", row.names = FALSE, quote = FALSE)
+message("Wrote ", out_tsv)
+```
+
+### Plotting of rep1 proportional subsample
+
+```{r proportional-subsample-plots}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(scales)
+library(patchwork)
+library(readxl)
+
+required_seq  <- "final_seq_data_updated.tsv"
+required_case <- "Latest Reported Events.xlsx"
+
+if (!file.exists(required_seq))  stop("Missing final_seq_data_updated.tsv in parent dir")
+if (!file.exists(required_case)) stop("Missing Latest Reported Events.xlsx in parent dir")
+
+base_dir <- getwd()
+
+d       <- "rep1_proportional"
+run_dir <- file.path(base_dir, "proportional", d)
+run_tsv <- file.path(run_dir, paste0(d, ".tsv"))
+if (!file.exists(run_tsv)) {
+  stop("Missing proportional subsample file: ", run_tsv, " — run hc-bio-proportional-subsample first.")
+}
+
+message("Running proportional subsample plots in: ", d)
+
+full_raw      <- read.delim(file.path(base_dir, required_seq), sep = "\t", stringsAsFactors = FALSE)
+subsample_raw <- read.delim(run_tsv, sep = "\t", stringsAsFactors = FALSE)
+case_raw      <- read_excel(file.path(base_dir, required_case))
+
+full_raw <- full_raw %>%
+  mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+         Year = lubridate::year(Collection_Date_Final))
+
+subsample_raw <- subsample_raw %>%
+  mutate(Collection_Date_Final = as.Date(Collection_Date_Final),
+         Year = lubridate::year(Collection_Date_Final))
+
+case_europe <- case_raw %>%
+  mutate(Year = lubridate::year(as.Date(`observation date`))) %>%
+  group_by(Year) %>%
+  summarise(total_cases = dplyr::n_distinct(`Event ID`), .groups = "drop")
+
+hab_pal <- c(
+  Coastal = "#0072B2", Farm = "#CD5C5C", Forest = "#BCBD22", Grassland = "#26A69A",
+  `Human_Modified` = "#56B4E9", Marine = "#CC79A7", Shrubland = "lightslategray",
+  Urban = "#E6842A", Others = "#000000", Woodland = "#6B4C1B", Rock = "#7570B3", Wetland = "#006D2C"
+)
+
+clean_hab <- function(df) df %>%
+  mutate(Habitat = trimws(Habitat),
+         Habitat = ifelse(Habitat %in% names(hab_pal), Habitat, "Others"))
+
+full_hab <- clean_hab(full_raw)
+sub_hab  <- clean_hab(subsample_raw)
+
+hab_counts_full <- full_hab %>%
+  group_by(Year, Habitat) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+hab_counts_sub <- sub_hab %>%
+  group_by(Year, Habitat) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_hab_full <- max(hab_counts_full$n_isolates, na.rm = TRUE) / max(hab_counts_full$total_cases, na.rm = TRUE)
+scale_hab_sub  <- max(hab_counts_sub$n_isolates,  na.rm = TRUE) / max(hab_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_hab <- function(df, sf, ttl) {
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = Habitat),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(values = hab_pal, drop = FALSE) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal")
+}
+
+p_hab_full <- plot_hab(hab_counts_full, scale_hab_full, "Isolates & Cases by Habitat (Full Data)")
+p_hab_sub  <- plot_hab(hab_counts_sub,  scale_hab_sub,
+                       "Isolates & Cases by Habitat (Proportional subsample)")
+
+combined_hab <- (p_hab_full / p_hab_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+type_pal <- c(
+  Domestic_Mammal = "#6A3D9A", Domestic_Bird = "#CD5C5C",
+  Wild_Mammal = "#BCBD22", Human = "#1B9E77", Wild_Bird = "#3C5488", Others = "#000000"
+)
+
+clean_type <- function(df) df %>%
+  mutate(Type = trimws(Type),
+         Type = ifelse(Type %in% names(type_pal), Type, "Others"))
+
+full_type <- clean_type(full_raw)
+sub_type  <- clean_type(subsample_raw)
+
+type_counts_full <- full_type %>%
+  group_by(Year, Type) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+type_counts_sub <- sub_type %>%
+  group_by(Year, Type) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_type_full <- max(type_counts_full$n_isolates, na.rm = TRUE) / max(type_counts_full$total_cases, na.rm = TRUE)
+scale_type_sub  <- max(type_counts_sub$n_isolates,  na.rm = TRUE) / max(type_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_type <- function(df, sf, ttl) {
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = Type),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(values = type_pal, name = "Host", drop = FALSE) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal")
+}
+
+p_type_full <- plot_type(type_counts_full, scale_type_full, "Isolates & Cases by Host Type (Full Data)")
+p_type_sub  <- plot_type(type_counts_sub,  scale_type_sub,
+                         "Isolates & Cases by Host Type (Proportional)")
+
+combined_type <- (p_type_full / p_type_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+hc_cols <- c(
+  HC_Cluster_1_Alpine = "#0072B2",
+  HC_Cluster_1_Arctic = "#8DA0CB",
+  HC_Cluster_1_Atlantic = "#CD5C5C",
+  HC_Cluster_1_Continental = "#BCBD22",
+  HC_Cluster_2_Alpine = "#26A69A",
+  HC_Cluster_2_Continental = "#CC79A7",
+  HC_Cluster_2_Mediterranean = "lightslategray",
+  HC_Cluster_2_Pannonian = "#6B4C1B",
+  HC_Cluster_3_Alpine = "#7570B3",
+  HC_Cluster_3_Boreal = "#006D2C",
+  HC_Cluster_4_Mediterranean = "#56B4E9"
+)
+
+clean_hc_bio <- function(df) {
+  df %>%
+    mutate(HC_Bio_Combined = trimws(as.character(HC_Bio_Combined))) %>%
+    filter(
+      !is.na(HC_Bio_Combined),
+      nzchar(HC_Bio_Combined),
+      HC_Bio_Combined %in% names(hc_cols)
+    )
+}
+
+full_hc_bio <- clean_hc_bio(full_raw)
+sub_hc_bio  <- clean_hc_bio(subsample_raw)
+if (nrow(full_hc_bio) == 0) {
+  stop("No rows left after matching HC_Bio_Combined to hc_cols (check labels match pipeline 7C, underscore form).")
+}
+
+hc_bio_counts_full <- full_hc_bio %>%
+  group_by(Year, HC_Bio_Combined) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+hc_bio_counts_sub <- sub_hc_bio %>%
+  group_by(Year, HC_Bio_Combined) %>%
+  summarise(n_isolates = n_distinct(Isolate_Id), .groups = "drop") %>%
+  left_join(case_europe, by = "Year")
+
+scale_hc_bio_full <- max(hc_bio_counts_full$n_isolates, na.rm = TRUE) / max(hc_bio_counts_full$total_cases, na.rm = TRUE)
+scale_hc_bio_sub  <- max(hc_bio_counts_sub$n_isolates,  na.rm = TRUE) / max(hc_bio_counts_sub$total_cases,  na.rm = TRUE)
+
+plot_hc_bio <- function(df, sf, ttl) {
+  ggplot(df, aes(x = Year)) +
+    geom_bar(aes(y = n_isolates, fill = HC_Bio_Combined),
+             stat = "identity", position = "dodge", width = 1.4) +
+    geom_line(aes(y = total_cases * sf), colour = "black", size = 1) +
+    geom_point(aes(y = total_cases * sf), colour = "black", size = 2) +
+    geom_text(
+      data = df %>% filter(Year == 2017) %>% slice(1),
+      aes(x = Year, y = total_cases * sf, label = "Case Counts"),
+      colour = "black", size = 7, hjust = -0.2, vjust = -0.8, inherit.aes = FALSE
+    ) +
+    scale_fill_manual(
+      values = hc_cols,
+      name   = "HC_Bio_Combined",
+      drop   = FALSE,
+      breaks = names(hc_cols)
+    ) +
+    scale_x_continuous(breaks = 2016:2025) +
+    scale_y_continuous("Number of Isolates",
+                       sec.axis = sec_axis(~./sf, name = "Number of Cases")) +
+    labs(title = ttl, x = "Year") +
+    theme_minimal(base_size = 15) +
+    theme(legend.position = "bottom", legend.direction = "horizontal") +
+    guides(fill = guide_legend(ncol = 3))
+}
+
+p_hc_bio_full <- plot_hc_bio(hc_bio_counts_full, scale_hc_bio_full,
+                             "Isolates & Cases by HC_Bio_Combined (Full Data)")
+p_hc_bio_sub  <- plot_hc_bio(hc_bio_counts_sub,  scale_hc_bio_sub,
+                             "Isolates & Cases by HC_Bio_Combined (Proportional)")
+
+combined_hc_bio <- (p_hc_bio_full / p_hc_bio_sub) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+
+ggsave(file.path(run_dir, paste0("Habitat_", d, ".png")),
+       combined_hab,  width = 14, height = 9, dpi = 300, bg = "transparent")
+ggsave(file.path(run_dir, paste0("Habitat_", d, ".pdf")),
+       combined_hab,  width = 14, height = 9)
+
+ggsave(file.path(run_dir, paste0("Host_", d, ".png")),
+       combined_type, width = 14, height = 9, dpi = 300)
+ggsave(file.path(run_dir, paste0("Host_", d, ".pdf")),
+       combined_type, width = 14, height = 9)
+
+ggsave(file.path(run_dir, paste0("HC_Bio_Combined_", d, ".png")),
+       combined_hc_bio, width = 14, height = 9, dpi = 300)
+ggsave(file.path(run_dir, paste0("HC_Bio_Combined_", d, ".pdf")),
+       combined_hc_bio, width = 14, height = 9)
+
+message("Proportional subsample plots finished (see proportional/rep1_proportional).")
+```
+
+### Create FASTA file for all replicates
+
+```{r create-fasta-rep1}
+library(dplyr)
+
+base_dir <- getwd()
+
+required_fasta_cols <- c(
+  "Isolate_Id", "Isolate_Name", "Habitat", "Type",
+  "Country", "HC_Bio_Combined", "Collection_Date_Final", "Sequence"
+)
+
+rep1_tsv_files <- list(
+  file.path(base_dir, "stratified",   "rep1_stratified",   "rep1_stratified.tsv"),
+  file.path(base_dir, "equal",        "rep1_equal",        "rep1_equal.tsv"),
+  file.path(base_dir, "proportional", "rep1_proportional", "rep1_proportional.tsv")
+)
+
+for (tsv_file in rep1_tsv_files) {
+  if (!file.exists(tsv_file)) {
+    warning("Missing TSV file: ", tsv_file)
+    next
+  }
+
+  rep_label <- tools::file_path_sans_ext(basename(tsv_file))
+  subsampled_data <- read.delim(tsv_file, sep = "\t", stringsAsFactors = FALSE)
+
+  missing_cols <- setdiff(required_fasta_cols, names(subsampled_data))
+  if (length(missing_cols) > 0) {
+    warning(
+      "Skipping ", tsv_file, " (missing columns: ",
+      paste(missing_cols, collapse = ", "), ")"
+    )
+    next
+  }
+
+  fasta_file <- file.path(dirname(tsv_file), paste0(rep_label, ".fasta"))
+  fileConn <- file(fasta_file, "w")
+
+  apply(subsampled_data, 1, function(row) {
+    header <- paste0(
+      ">", row[["Isolate_Id"]], "|",
+      row[["Isolate_Name"]], "|",
+      row[["Habitat"]], "|",
+      row[["Type"]], "|",
+      row[["Country"]], "|",
+      row[["HC_Bio_Combined"]], "|",
+      row[["Collection_Date_Final"]]
+    )
+    writeLines(header, fileConn)
+    writeLines(row[["Sequence"]], fileConn)
+  })
+
+  close(fileConn)
+  cat("FASTA file saved as", fasta_file, "\n")
+}
+```

@@ -1,0 +1,1169 @@
+---
+title: "Pipeline"
+author: "Sachin Subedi"
+date: "2026-04-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Set Working Directory
+```{r}
+setwd("~data/")
+```
+## Data file
+```{r}
+library(readxl)
+library(tidyverse)
+library(tidyverse)
+
+seq_data <- read_excel("may.xlsx")
+colnames(seq_data)
+```
+
+```{r}
+library(tibble)
+
+lookup <- tribble(
+  ~pattern, ~Family, ~Habitat, ~Trophic_Level, ~Trophic_Niche, ~Primary_Lifestyle, ~Type,
+
+  # --- Seabirds --------------------------------------------------------------
+  "murre|auk|guillemot|raxorbill|Razorbill",
+      "Alcidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "oystercatcher|Haematopus_ostralegus",
+      "Haematopodidae", "Coastal", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "tern|Arctic Tern|Arctic tern|arctic tern|Little_Tern|little_tern",
+      "Laridae", "Coastal", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+  "gull-billed_tern",
+      "Laridae", "Coastal", "Carnivore", "Omnivore", "Aerial", "Wild_Bird",
+  "Sterna hirundo|Sterna_hirundo|Thalasseus_sandvicensis|sandwich_tern|Sandwich_Tern|Sterna sandvicensis|Sandwich tern|Sandwich Tern|CommonTern|common_tern|Common_tern|Common_Tern|Common tern|common tern|Common Tern|common tern",
+      "Laridae", "Marine", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+  "caspian_tern|Caspian tern",
+      "Laridae", "Wetland", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+  "mediterranean_gull|Mediterranean_gull|Mediterranean gull|Mediterranean Gull",
+      "Laridae", "Coastal", "Carnivore", "Omnivore", "Generalist", "Wild_Bird",
+  "great_black-baked_gull|Great_Black-Backed_Gull|Great_black-backed_gull|Great_Black_Backed_Gull|Great Black-backed Gull|Gr_bk_bd_gull|black-backed gull|Larus marinus",
+      "Laridae", "Coastal", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "Larus|gull|Gull|Gull1|Gull10|seagull|Larus_michaellis|Larus michahellis|yellow_leggend-gull|yellow_legged-gull|yellow-legged_gull|Yellow-legged_Gull|yellow-legged-gull|Glaucous_gull|Caspian Gull|Caspian gull",
+      "Laridae", "Coastal", "Carnivore", "Omnivore", "Generalist", "Wild_Bird",
+  "slender-billed_gull|Little_gull|little_gull|lesser_black-backed_gull|lesser black-backed gull|Lesser black-backed Gull|Lesser Black-backed Gull|Larus_argentatus|Herrin_gull|herring gull|Herring Gull|herring_gull|Herring_gull|Herring_Gull|european_herring_gull|European_herring_gull|European_herring_gullNorway|European herring gull|European Herring Gull|European Herring gull|european herring gull|Larus argentatus|audouins_gull",
+      "Laridae", "Coastal", "Carnivore", "Aquatic_Predator", "Generalist", "Wild_Bird",
+  "Larus canus|Larus ridibundus|Chroicocephalus ridibundus|Chroicocephalus_ridibundus|black-headed gull|black-headed Gull|Black-headed gull|Black-headed Gull|black-headed_gull|Black-headed_gull|Black-headed_Gull|Black-Headed_Gull|black-headed-gull|black_headed_gull|Black_Headed_Gull|black_headed-gull|black-headead_gull|blach-headed gull|black headed seagull|Bl_H_gull",
+      "Laridae", "Coastal", "Carnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "Black-legged Kittiwake|Black-legged_kitiwake|black-legged_kittiwake|Black-legged_kittiwake|Kittiwake|kittiwake",
+      "Laridae", "Marine", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+
+  # --- Cormorants / Pelicans / Penguins -------------------------------------
+  "cormorant|Cormorant|Cormorants|great cormorant|Great cormorant|Great Cormorant|Phalacrocorax_carbo",
+      "Phalacrocoracidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "Shag",
+      "Phalacrocoracidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "dalmatian pelican|spot-billed pelican|zoo_pelican",
+      "Pelecanidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "pelican|Pelican",
+      "Pelecanidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "penguin",
+      "Spheniscidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+
+  # --- Marine & semi‑aquatic mammals ----------------------------------------
+  "Otter|otter|LutraLutra",
+      "Mustelidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "walrus",
+      "Odobenidae", "Marine", "Carnivore", "Invertivore", "Aquatic", "Wild_Bird",
+  "seal|harbour_seal",
+      "Otariidae", "Marine", "Carnivore", "Vertivore", "Aquatic", "Wild_Bird",
+  "porpoise",
+      "Phocoenidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Mammal",
+  "mink|white mink",
+      "Mustelidae", "Farm", "Carnivore", "Vertivore", "Generalist", "Domestic_Mammal",
+
+  # --- Waterfowl (Anatidae) --------------------------------------------------
+  "Go|goose|Goose|teal|Teal|anser|wild goose|wild_goose|Wild_goose|tundra_bean_goose|Taiga bean goose|Graylag goose|graylag goose|graylag_goose|Grey_Go|Anser anser|bean_goose|Bean goose|bean goose|Eurasian_teal|Eurasian teal|eurasian teal|Common Teal|common teal",
+      "Anatidae", "Wetland", "Herbivore", "Herbivore_Terrestrial", "Terrestrial", "Wild_Bird",
+  "pomeranian goose|rural_goose|white-fronted Goose|White-fronted Goose|white-fronted goose|white-fronted_goose|White-fronted_goose|Anser albifrons|pink_footed_goose|pink-footed goose|Pink-footed Goose|Pink-footed_goose|pink-footed_goose|Pink-Footed_Goose|Anser brachyrhynchus|Branta ruficollis|Red-breasted_goose|Branta leucopsis|Branta canadensis|Lesser white-fronted goose|lesser white-fronted goose|Greater White-fronted Goose|greater white-fronted goose|greater_white-fronted_goose|Anser albifrons|greater canada goose|Branta bernicla|brant goose|brant|brent_goose|canada goose|Canada goose|Canada Goose|canada_goose|Canada_goose|Canada_Goose|Canadagoose|Canade goose|barnacle goose|Barnacle goose|Barnacle Goose|barnacle_goose|Barnacle_goose|barnacle|Anser_Brachyrhynchus_Anser_Anser",
+      "Anatidae", "Grassland", "Herbivore", "Herbivore_Terrestrial", "Terrestrial", "Wild_Bird",
+  "Hawaiian_goose|Hawaiian goose|Nene_Goose|Branta sandvicensis",
+      "Anatidae", "Shrubland", "Herbivore", "Herbivore_Terrestrial", "Terrestrial", "Wild_Bird",
+  "teal|Teal|Eurasian_teal|Eurasian teal|eurasian teal|Common Teal|common teal|Anas crecca",
+      "Anatidae", "Wetland", "Herbivore", "Herbivore_Aquatic", "Aquatic", "Wild_Bird",
+  "Dk|duck|Duck|wild_duck|wild duck|Anas sp|whistling_duck|Whistling_Duck|mallard_Denmark|Mallard duck|Anas platyrhynchos|anas_platyrhynchos|Mulard duck|Mal|Mallard Duck|mallard_Denmark|mallard_duck|Mallard_duck|mallard|Mallard|cygnus_cygnus|cygnus-cygnus|cygnus_olor|Cygnus_olor|cygnus-olor|cygnus-columbianus|M_Swan|Mute swan|Mute Swan|mute swan|mute_swan|Mute_swan|Mute_Swan|mute-Swan|mute-swan|Muteswan|Cygnus olor|Swan|swan|Whooper swan|Whooper Swan|whooper swan|whooper_swan|Whooper_swan|Whooper_Swan|whooper-swan|Cygnus cygnus|Cygnus olor|Cygnus atratus|black-swan|Black-necked Swan|black-necked swan|black_swan|black swan|Bk_swan|Anas strepera|Gadwall|gadwall|pochard_duck|common_pochard",
+      "Anatidae", "Wetland", "Herbivore", "Herbivore_Aquatic", "Aquatic", "Wild_Bird",
+  "coscoroba swan",
+      "Anatidae", "Wetland", "Omnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "wigeon|Wigeon|Mareca penelope|Anas penelope|eurasian wigeon|Eurasian wigeon|Eur_Wig|Eurasian Wigeon|eurasian_wigeon|Eurasian_wigeon|eurasian-wigeon",
+      "Anatidae", "Wetland", "Omnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "Common Goldeneye|common goldeneye|common golden eye|Bucephala clangula",
+      "Anatidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "Common eider|common eider|Somateria mollissima|Somateria spectabilis|common_eider|Common_eider|steamer duck",
+      "Anatidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "tufted duck|Aythya fuligula|Tufted Duck|Tufted duck|tufted_duck|Aythya_fuligula",
+      "Anatidae", "Wetland", "Omnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "shelduck|Tadorna tadorna|common shelduck",
+      "Anatidae", "Coastal", "Carnivore", "Aquatic_Predator", "Generalist", "Wild_Bird",
+  "Ruddy Shelduck|Tadorna feruginea",
+      "Anatidae", "Wetland", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "muscovy duck|Muscovy duck|muscovy_duck|Cairina moschata|mule duck",
+      "Anatidae", "Wetland", "Omnivore", "Omnivore", "Generalist", "Wild_Bird",
+  "Mandarin Duck",
+      "Anatidae", "Forest", "Herbivore", "Herbivore_Aquatic", "Generalist", "Wild_Bird",
+  "Carolina_Duck",
+      "Anatidae", "Wetland", "Herbivore", "Omnivore", "Generalist", "Wild_Bird",
+
+  # --- Wading birds & shorebirds -------------------------------------------
+  "grey heron|Grey heron|Grey Heron|grey_heron|gray_heron|grey-heron|Egretta_garzetta|heron|egret|Ardea_cinerea|Ardea cinerea|Ardea alba|great_egret|great egret|Great Egret",
+      "Ardeidae", "Wetland", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "western-cattle-egret",
+      "Ardeidae", "Human_Modified", "Carnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "stork|white_stork|White_stork|White Stork|white stork|Ciconia_ciconia|ciconia_ciconia",
+      "Ciconiidae", "Grassland", "Carnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "lapwing|northern lapwing",
+      "Charadriidae", "Wetland", "Carnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "crane|common_crane|common crane|Common Crane|Common crane|crowned_crane_zoo",
+      "Gruidae", "Wetland", "Carnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "flamingo",
+      "Phoenicopteridae", "Wetland", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "grebe|Great crested grebe|great crested grebe|Great Crested Grebe|great_crested_grebe|Podiceps_cristatus|Podiceps cristatus|G_c_grebe|Tachybaptus_ruficollis|Tachybaptus ruficollis",
+      "Podicipedidae", "Wetland", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "moorhen|Coot|common coot",
+      "Rallidae", "Wetland", "Herbivore", "Herbivore_Aquatic", "Generalist", "Wild_Bird",
+  "knot|red knot|Red Knot|Red knot|knot_wader|Calidris canutus|sanderling|Sanderling|Calidris alba|green_sandpiper|Sand_piper",
+      "Scolopacidae", "Coastal", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "curlew|Curlew|Eurasian curlew|eurasian curlew|Numenius arquata|Numenius_arquata",
+      "Scolopacidae", "Grassland", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+  "Eurasian Spoonbill|Eurasian spoonbill|eurasian-spoonbill|spoonbill|sacred-ibis",
+      "Threskiornithidae", "Wetland", "Carnivore", "Aquatic_Predator", "Terrestrial", "Wild_Bird",
+
+  # --- Humans & marine mammals ---------------------------------------------
+  "human",
+      "Hominidae", "Urban", "Omnivore", "Omnivore", "Terrestrial", "Human",
+  "dolphin",
+      "Delphinidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Mammal",
+
+  # --- Tubenoses, skuas, gannets -------------------------------------------
+  "Northern Fulmar|northern fulmar|Northern_fulmar|Southern_Fulmar|Fulmar",
+      "Procellariidae", "Marine", "Carnivore", "Aquatic_Predator", "Aquatic", "Wild_Bird",
+  "skua|parasitic_jaeger|Great skua|Great_skua|great_skua|Great_Skua|long-tailed_skua",
+      "Stercorariidae", "Marine", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+  "Northern gannet|northern gannet|Northern Gannet|northern_gannet|Northern_gannet|Nothern_gannet|nothern_gannet|NothernGannet|gannet|Gannet|Morus_bassanus",
+      "Sulidae", "Marine", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+
+  # --- Domestic birds & farm animals ---------------------------------------
+  "chicken|Ch|Chicken|Poultry|rooster|turkey|layer|hen",
+      "Phasianidae", "Farm", "Herbivore", "Omnivore", "Terrestrial", "Domestic_Bird",
+  "quail",
+      "Phasianidae", "Farm", "Herbivore", "Omnivore", "Terrestrial", "Domestic_Bird",
+  "domestic duck|muscovy duck|Muscovy duck|muscovy_duck|Cairina_moschata|Cairina moschata|domestic_duck|Anas platyrhynchos var. domesticus|Anas platyrhynchos f. domestica|Domestic_duck|Domestic_Duck|domestic-duck|pekin_duck|Indian Runner Duck|Indian_runner_ducks|decoy_duck|breeder duck",
+      "Anatidae", "Farm", "Herbivore", "Herbivore_Aquatic", "Aquatic", "Domestic_Bird",
+  "domestic goose|Anser anser domesticus|domestic_goose|Domestic_goose|Domestic_Goose|captive-goose",
+      "Anatidae", "Farm", "Herbivore", "HerbivoreTerrestrial", "Terrestrial", "Domestic_Bird",
+
+  # --- Domestic mammals -----------------------------------------------------
+  "domestic|cat",
+      "Felidae", "Urban", "Carnivore", "Vertivore", "Terrestrial", "Domestic_Mammal",
+
+  # --- Raptors (Accipitridae) ----------------------------------------------
+  "sea_eagle|Sea_eagle|white_tailed_eagle|White_Tailed_Eagle|white-tailed eagle|White-tailed eagle|White-Tailed Eagle|white-tailed_eagle|White-tailed_eagle|white-tailed sea eagle|White-tailed sea eagle|Halietus albicilla",
+      "Accipitridae", "Rock", "Carnivore", "Aquatic_Predator", "Aerial", "Wild_Bird",
+  "Haliaeetus leucocephalus|bald_eagle",
+      "Accipitridae", "Wetland", "Carnivore", "Omnivore", "Generalist", "Wild_Bird",
+  "golden_eagle",
+      "Accipitridae", "Grassland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
+  "Vulture|vulture|bearded_vulture|griffon vulture",
+      "Accipitridae", "Grassland", "Scavenger", "Scavenger", "Terrestrial", "Wild_Bird",
+  "bearded_vulture|Gypaetus_barbatus",
+      "Accipitridae", "Rock", "Scavenger", "Scavenger", "Terrestrial", "Wild_Bird",
+  "buzzard|Buzzard|common buzzard|Common Buzzard|Common buzzard|common_buzzard|Common_buzzard|Common_Buzzard|common-buzzard|rough-legged buzzard|Buteo_buteo|Buteo buteo",
+      "Accipitridae", "Grassland", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
+  "goshawk|Goshawk|Eurasian Goshawk|Eurasian goshawk|northern goshawk|Northern goshawk|Northern_goshawk|northern_goshawk|Accipiter gentilis",
+      "Accipitridae", "Forest", "Carnivore", "Vertivore", "Generalist", "Wild_Bird",
+  "sparrowhawk|Sparrowhawk|eurasian sparrowhawk|Eurasian sparrowhawk|Eurasian Sparrowhawk|Accipiter nisus",
+      "Accipitridae", "Forest", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
+  "hawk|red-backed-hawk",
+      "Accipitridae", "Woodland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
+  "Harris Hawk|Harris_Hawk|Parabuteo",
+      "Accipitridae", "Shrubland", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
+
+  # --- Songbirds & others ---------------------------------------------------
+  "Reed_Warbler",
+      "Acrocephalidae", "Wetland", "Carnivore", "Invertivore", "Insessorial", "Wild_Bird",
+  "pigeon|Columba_palumbus|Pigeon",
+      "Columbidae", "Woodland", "Herbivore", "Omnivore", "Insessorial", "Wild_Bird",
+  "dove|european_turtle_dove",
+      "Columbidae", "Woodland", "Herbivore", "Granivore", "Terrestrial", "Wild_Bird",
+  "Raven|raven|Common raven|Crow|crow|corvus_corvus",
+      "Corvidae", "Forest", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "western jackdaw|jackdaw|Corvus_monedula|pica_pica|magpie|Magpie|common magpie|Eurasian magpie|Eurasian Magpie|Eurasian magpie",
+      "Corvidae", "Human_Modified", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "Rook|Corvus frugilegus",
+      "Corvidae", "Grassland", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "garrulus_glandarius|Garrulus_glandarius",
+      "Corvidae", "Forest", "Omnivore", "Omnivore", "Insessorial", "Wild_Bird",
+
+  # --- Falcons --------------------------------------------------------------
+  "Falco peregrinus|Falco_peregrinus|falcon|P_falcon|peregrine falcon|Peregrine falcon|Peregrine Falcon|peregrine_Falcon|peregrine_falcon|Peregrine_falcon|Peregrine_Falcon|peregrine-falcon|Perigrine falcon|Pilgrim Falcon|Gyrfalcon|Hobby_Falcon",
+      "Falconidae", "Grassland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
+  "Hobby_Falcon",
+      "Falconidae", "Woodland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
+  "Common Kestrel|common kestrel|common-kestrel|kestrel|Kestrel",
+      "Falconidae", "Shrubland", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
+
+  # --- Other galliforms -----------------------------------------------------
+  "Guinea fowl|guinea_fowl|Guinea_Fowl|guinea-fowl|guinea_fowl-chicken|GuineaFowl|guineafowl|Guineafowl|Numida meleagris",
+      "Numididae", "Woodland", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
+
+  # --- Passerines & small birds --------------------------------------------
+  "house_sparrow",
+      "Passeridae", "Human_Modified", "Herbivore", "Granivore", "Terrestrial", "Wild_Bird",
+
+  # --- Pheasants, peafowl, partridge ---------------------------------------
+  "pheasant|Pheasant|common pheasant|Common pheasant|Common Pheasant|Phasianus colchicus|Phasianus_colchicus|Phasanius sp.",
+      "Phasianidae", "Human_Modified", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "Indian Peafowl|peacock|Peacock|Common peacock|Pavo cristatus|Pavo|Pavo_cristatus|peafowl|Partridge|partridge",
+      "Phasianidae", "Forest", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "Partridge|partridge",
+      "Phasianidae", "Grassland", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "Gallus_gallus|Meleagris_gallopavo|Meleagris gallopavo",
+      "Phasianidae", "Forest", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
+
+  # --- Ratites --------------------------------------------------------------
+  "greater Herbivore_Aquaticrhea|Rhea",
+      "Rheidae", "Grassland", "Omnivore", "Omnivore", "Terrestrial", "Wild_Bird",
+  "emy",
+      "Casuariidae", "Grassland", "Herbivore", "Omnivore", "Terrestrial", "Wild_Bird",
+
+  # --- Owls -----------------------------------------------------------------
+  "Bubo_bubo|Eurasian eagle-owl|Eurasian_eagle-owl|Eurasian eagle owl|Eurasian Eagle-Owl|eagle owl|eagle_owl|Eagle_owl",
+      "Strigidae", "Rock", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
+  "Ural owl|ural_owl|Strix uralensis",
+      "Strigidae", "Forest", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
+  "little_owl|little-owl",
+      "Strigidae", "Human_Modified", "Carnivore", "Omnivore", "Insessorial", "Wild_Bird",
+  "long-eared owl",
+      "Strigidae", "Forest", "Carnivore", "Vertivore", "Aerial", "Wild_Bird",
+  "Otus_scops",
+      "Strigidae", "Woodland", "Carnivore", "Invertivore", "Insessorial", "Wild_Bird",
+  "tawny owl|Tawny owl|tawny_owl|Towny owel",
+      "Strigidae", "Forest", "Carnivore", "Invertivore", "Insessorial", "Wild_Bird",
+
+  # --- Barn owl -------------------------------------------------------------
+  "barn owl|Tyto_alba|Tyto alba",
+      "Tytonidae", "Human_Modified", "Carnivore", "Vertivore", "Insessorial", "Wild_Bird",
+
+  # --- Thrushes & robins ----------------------------------------------------
+  "thrush",
+      "Turdidae", "Forest", "Omnivore", "Invertivore", "Generalist", "Wild_Bird",
+  "blackbird",
+      "Turdidae", "Forest", "Omnivore", "Omnivore", "Generalist", "Wild_Bird",
+
+  # --- Robins & kingfishers -------------------------------------------------
+  "european_robin",
+      "Muscicapidae", "Forest", "Carnivore", "Omnivore", "Generalist", "Wild_Bird",
+  "common-kingfisher",
+      "Alcedinidae", "Forest", "Carnivore", "Aquatic_Predator", "Insessorial", "Wild_Bird",
+
+  # --- Wild mammals ---------------------------------------------------------
+  "fox|Fox|red fox|Red fox|red_fox|Red_fox|Red_Fox|red-fox|Vulpes_vulpes|Vulpes_Vulpes|silver fox|Bush_dog|raccoon_dog|raccoon-dog",
+      "Canidae", "Forest", "Carnivore", "Omnivore", "Terrestrial", "Wild_Mammal",
+  "lynx|Lynx|caracal|Caracal",
+      "Felidae", "Forest", "Carnivore", "Vertivore", "Terrestrial", "Wild_Mammal",
+  "European polecat|polecat|marten|ferret|badger|Mustela_putorius|Mustela_furo|badger",
+      "Mustelidae", "Forest", "Carnivore", "Vertivore", "Terrestrial", "Wild_Mammal",
+  "bear|tibetan blue bear",
+      "Ursidae", "Forest", "Carnivore", "Omnivore", "Terrestrial", "Wild_Mammal",
+
+  # --- Catch‑all ------------------------------------------------------------
+  "wild bird|Wild bird|wild_bird|avian|Mixed_wild_birds|environment|NA|unknown|Feces|feces|UNL|Wild waterfowl",
+      "Others", "Others", "Others", "Others", "Others", "Others"
+)
+
+```
+
+
+```{r}
+classify_host <- function(text_value, lookup_table) {
+  hits <- lookup_table %>%
+    filter(str_detect(text_value, regex(pattern, ignore_case = TRUE)))
+  
+  if (nrow(hits) == 0) {
+    return(rep(NA_character_, 6))
+  }
+  
+  best_match <- hits %>% slice_max(order_by = nchar(pattern), n = 1)
+  
+  unlist(best_match[c("Family", "Habitat", "Trophic_Level", "Trophic_Niche", "Primary_Lifestyle", "Type")],
+         use.names = FALSE)
+}
+```
+
+## Matched for Isolate_Name
+```{r}
+seq_data <- seq_data %>%
+  mutate(
+    matched = map(Isolate_Name, ~ classify_host(.x, lookup)),
+    Family            = map_chr(matched, 1),
+    Habitat           = map_chr(matched, 2),
+    Trophic_Level     = map_chr(matched, 3),
+    Trophic_Niche     = map_chr(matched, 4),
+    Primary_Lifestyle = map_chr(matched, 5),
+    Type              = map_chr(matched, 6)
+  ) %>%
+  dplyr::select(-matched)
+
+
+```
+
+## Matched for Host
+```{r}
+# Apply classification to rows where Family is NA, using Host
+seq_data <- seq_data %>%
+  mutate(
+    matched_fallback = if_else(
+      is.na(Family),
+      map(Host, ~ classify_host(.x, lookup)),
+      list(rep(NA_character_, 6))  # skip if already matched
+    ),
+    Family = if_else(is.na(Family),        map_chr(matched_fallback, 1), Family),
+    Habitat = if_else(is.na(Habitat),      map_chr(matched_fallback, 2), Habitat),
+    Trophic_Level = if_else(is.na(Trophic_Level), map_chr(matched_fallback, 3), Trophic_Level),
+    Trophic_Niche = if_else(is.na(Trophic_Niche),          map_chr(matched_fallback, 4), Trophic_Niche),
+    Primary_Lifestyle = if_else(is.na(Primary_Lifestyle),  map_chr(matched_fallback, 5), Primary_Lifestyle),
+    Type = if_else(is.na(Type),            map_chr(matched_fallback, 6), Type)
+  ) %>%
+  dplyr::select(-matched_fallback)
+
+```
+
+## Remove lab derived, Penguin and Outlier
+```{r}
+seq_data <- seq_data %>%
+  filter(
+    !(Host %in% c("Laboratory derived", "Unknown") |
+      Family == "Spheniscidae" |
+      Isolate_Id == "EPI_ISL_18538407")
+  )
+
+```
+
+```{r}
+library(stringr)
+
+seq_data$Country <- trimws(str_match(seq_data$Location, "^Europe / ([^/]+)")[, 2])
+
+seq_data <- seq_data %>%
+  mutate(Country = case_when(
+    Country == "Russian Federation" ~ "Russia",
+    Country == "Czech Republic" ~ "Czechia",
+    Country == "Macedonia, the former Yogoslav Republic of" ~ "North Macedonia",
+    Country == "Moldova, Republic of" ~ "Moldova",
+    Country == "Svalbard and Jan Mayen" ~ "Norway",
+    Country == "Jersey" ~ "United Kingdom",
+    Country == "Isle of Man" ~ "United Kingdom",
+    Country == "Bosnia Herz" ~ "Bosnia and Herzegovina",
+    Country == "Serbia" ~ "Republic of Serbia",
+    TRUE ~ Country
+  )) %>%
+  filter(Country != "Russia")
+
+cat("Unique countries in seq_data:\n")
+print(sort(unique(seq_data$Country)))
+```
+
+```{r}
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+unique_countries <- unique(seq_data$Country)
+
+europe_map <- ne_countries(scale = "medium", returnclass = "sf") %>% 
+  filter(admin %in% unique_countries)
+
+cat("Matched", nrow(europe_map), "of", length(unique_countries), "countries in map data\n")
+
+centroids <- st_point_on_surface(europe_map) %>% 
+             mutate(
+               Longitude = st_coordinates(.)[,1],
+               Latitude  = st_coordinates(.)[,2]
+             ) %>% 
+             st_drop_geometry() %>% 
+             dplyr::select(Country = admin, Longitude, Latitude)
+
+# check for any countries that rnaturalearth didn't return
+anti_join(tibble(Country = unique_countries), centroids, by = "Country")
+```
+
+
+# ============================================================================
+# SECTION 7: REGIONAL CLASSIFICATIONS
+# ============================================================================
+
+
+## 7A. EEA Biogeographic Regions (PRIMARY CLASSIFICATION)
+
+Based on European Environment Agency biogeographic regions map.
+This addresses Reviewer 2's concern about ecological/biological grounding.
+
+```{r biogeographic-regions}
+library(dplyr)
+library(sf)
+library(rnaturalearth)
+
+region_cols <- c(
+  alpine        = "#E69F00",
+  atlantic      = "#CC79A7",
+  boreal        = "#56B4E9",
+  continental   = "#009E73",
+  mediterranean = "#0072B2",
+  pannonian     = "#D55E00",
+  steppic       = "#000000"
+)
+
+biogeo_sf <- st_read("~/data/BioGeo/BiogeoRegions2016.shp", quiet = TRUE) %>%
+  st_make_valid() %>%
+  filter(short_name %in% names(region_cols)) %>%
+  select(EEA_Bioregion_raw = short_name, geometry)
+
+eu_countries <- ne_countries(continent = "Europe", returnclass = "sf") %>%
+  st_make_valid()
+
+eu_no_russia <- eu_countries %>%
+  filter(admin != "Russia") %>%
+  st_transform(st_crs(biogeo_sf))
+
+eu_mask <- st_union(eu_no_russia)
+eu_mask_sf <- st_sf(id = 1, geometry = eu_mask)
+
+biogeo_no_russia <- st_intersection(biogeo_sf, eu_mask_sf)
+
+study_countries <- eu_no_russia %>%
+  rename(Country = admin) %>%
+  filter(Country %in% unique(seq_data$Country))
+
+study_countries <- study_countries %>%
+  mutate(
+    Country = case_when(
+      Country == "Bosnia and Herz." ~ "Bosnia and Herzegovina",
+      Country == "Serbia" ~ "Republic of Serbia",
+      TRUE ~ Country
+    )
+  )
+
+study_countries_ea <- st_transform(study_countries, 3035)
+biogeo_no_russia_ea <- st_transform(biogeo_no_russia, 3035)
+
+country_region <- st_intersection(
+  study_countries_ea %>% select(Country),
+  biogeo_no_russia_ea %>% select(EEA_Bioregion_raw)
+)
+
+country_region_weights <- country_region %>%
+  mutate(overlap_area = st_area(geometry)) %>%
+  st_drop_geometry() %>%
+  group_by(Country, EEA_Bioregion_raw) %>%
+  summarise(overlap_area = sum(overlap_area), .groups = "drop") %>%
+  left_join(
+    study_countries_ea %>%
+      mutate(country_area = st_area(geometry)) %>%
+      st_drop_geometry() %>%
+      select(Country, country_area),
+    by = "Country"
+  ) %>%
+  mutate(weight = as.numeric(overlap_area / country_area)) %>%
+  mutate(
+    EEA_Bioregion = case_when(
+      EEA_Bioregion_raw == "alpine" ~ "Alpine",
+      EEA_Bioregion_raw == "atlantic" ~ "Atlantic",
+      EEA_Bioregion_raw == "boreal" ~ "Boreal",
+      EEA_Bioregion_raw == "continental" ~ "Continental",
+      EEA_Bioregion_raw == "mediterranean" ~ "Mediterranean",
+      EEA_Bioregion_raw == "pannonian" ~ "Pannonian",
+      EEA_Bioregion_raw == "steppic" ~ "Steppic",
+      TRUE ~ EEA_Bioregion_raw
+    )
+  ) %>%
+  arrange(Country, desc(weight))
+
+country_bioregion_primary <- country_region_weights %>%
+  group_by(Country) %>%
+  slice_max(order_by = weight, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  transmute(
+    Country,
+    EEA_Bioregion,
+    p_primary = weight
+  )
+
+island_bio <- data.frame(
+  Country       = c("Iceland", "Cyprus"),
+  EEA_Bioregion = c("Atlantic", "Mediterranean"),
+  p_primary     = c(1.0, 1.0),
+  stringsAsFactors = FALSE
+)
+country_bioregion_primary <- bind_rows(
+  country_bioregion_primary %>% dplyr::filter(!Country %in% island_bio$Country),
+  island_bio
+)
+
+country_bioregion_primary <- country_bioregion_primary %>%
+  mutate(
+    Bioregion_5 = case_when(
+      EEA_Bioregion %in% c("Boreal", "Arctic") ~ "Northern",
+      EEA_Bioregion == "Atlantic" ~ "Atlantic",
+      EEA_Bioregion %in% c("Continental", "Pannonian", "Steppic") ~ "Continental",
+      EEA_Bioregion == "Mediterranean" ~ "Mediterranean",
+      EEA_Bioregion == "Alpine" ~ "Alpine",
+      TRUE ~ NA_character_
+    )
+  )
+
+cat("\nCountry → Dominant Bioregion (area-weighted):\n")
+print(as.data.frame(country_bioregion_primary), row.names = FALSE)
+
+seq_data <- seq_data %>%
+  dplyr::select(-any_of(c("EEA_Bioregion", "Bioregion_5", "p_primary"))) %>%
+  left_join(country_bioregion_primary, by = "Country")
+
+missing_bio <- seq_data %>% filter(is.na(EEA_Bioregion)) %>% distinct(Country)
+if (nrow(missing_bio) > 0) {
+  cat("Countries missing biogeographic assignment:\n")
+  print(missing_bio)
+}
+
+cat("\nEEA Biogeographic Region counts:\n")
+print(table(seq_data$EEA_Bioregion, useNA = "ifany"))
+
+cat("\nSimplified 5-Region counts:\n")
+print(table(seq_data$Bioregion_5, useNA = "ifany"))
+
+cat("\nPrimary-region overlap proportion summary (p_primary):\n")
+print(summary(seq_data$p_primary))
+```
+## 7B2. Hierarchical Clustering — Mainland Europe
+
+```{r hierarchical-clustering-no-cyprus}
+set.seed(21)
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(RColorBrewer)
+library(geosphere)
+library(cluster)
+library(dendextend)
+
+island_outliers <- c("Iceland", "Cyprus")
+
+centroids_main <- centroids %>% filter(!Country %in% island_outliers)
+
+coords_main <- as.matrix(centroids_main[, c("Longitude", "Latitude")])
+rownames(coords_main) <- centroids_main$Country
+
+D_main <- distm(coords_main, fun = distHaversine) / 1000   # km
+rownames(D_main) <- centroids_main$Country
+colnames(D_main) <- centroids_main$Country
+D_main_dist <- as.dist(D_main)
+
+linkage_methods <- c("ward.D2", "complete", "average")
+
+coph_main <- sapply(linkage_methods, function(m) {
+  hc <- hclust(D_main_dist, method = m)
+  cor(D_main_dist, cophenetic(hc))
+})
+
+cat("Cophenetic correlations (mainland, excl. Cyprus):\n")
+print(round(coph_main, 3))
+
+best_method_main <- names(which.max(coph_main))
+cat("\nSelected linkage method (mainland):", best_method_main, "\n")
+
+hc_main <- hclust(D_main_dist, method = best_method_main)
+
+k_range <- 3:10
+
+sil_main <- sapply(k_range, function(k) {
+  cl <- cutree(hc_main, k = k)
+  mean(silhouette(cl, D_main_dist)[, "sil_width"])
+})
+
+sil_main_df <- data.frame(k = k_range, silhouette = round(sil_main, 3))
+cat("\nSilhouette scores by k (mainland only, excl. Cyprus):\n")
+print(sil_main_df)
+
+k_opt_main <- k_range[which.max(sil_main)]
+cat("\nOptimal k (mainland):", k_opt_main, "\n")
+
+cl_main <- cutree(hc_main, k = k_opt_main)
+
+serbia_cluster <- paste0("HC_Cluster_", cl_main[["Republic of Serbia"]])
+uk_cluster     <- paste0("HC_Cluster_", cl_main[["United Kingdom"]])
+greece_cluster <- paste0("HC_Cluster_", cl_main[["Greece"]])
+
+hc_lookup_initial <- data.frame(
+  Country    = c(names(cl_main), "Cyprus", "Belarus", "Montenegro", "Iceland"),
+  HC_Cluster = c(
+    paste0("HC_Cluster_", cl_main),
+    greece_cluster,
+    serbia_cluster,
+    serbia_cluster,
+    uk_cluster
+  ),
+  stringsAsFactors = FALSE
+)
+
+cat("\nHierarchical Cluster composition — initial (mainland + manual islands):\n")
+cat("(Cyprus → Greece cluster:", greece_cluster, ")\n")
+cat("(Belarus & Montenegro → Serbia cluster:", serbia_cluster, ")\n")
+cat("(Iceland → UK cluster:", uk_cluster, ")\n")
+for (i in sort(unique(hc_lookup_initial$HC_Cluster))) {
+  m <- hc_lookup_initial$Country[hc_lookup_initial$HC_Cluster == i]
+  cat(sprintf("\n%s (n=%d): %s\n", i, length(m), paste(m, collapse = ", ")))
+}
+
+hc_map_initial <- hc_lookup_initial %>% rename(HC_Cluster_main = HC_Cluster)
+
+europe_hc_initial <- ne_countries(continent = "Europe", returnclass = "sf") %>%
+  filter(name != "Russia", admin != "Iceland") %>%
+  left_join(hc_map_initial, by = c("admin" = "Country"))
+
+n_ini <- length(unique(na.omit(europe_hc_initial$HC_Cluster_main)))
+pal_ini <- setNames(
+  brewer.pal(max(3, n_ini), "Set2")[seq_len(n_ini)],
+  sort(unique(na.omit(europe_hc_initial$HC_Cluster_main)))
+)
+
+p_hc_initial <- ggplot(europe_hc_initial) +
+  geom_sf(aes(fill = HC_Cluster_main), colour = "black", linewidth = 0.2) +
+  scale_fill_manual(values = pal_ini, na.value = "gray90",
+                    name = "HC Cluster\n(initial)") +
+  coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE) +
+  labs(title = paste0("HC — initial (k = ", k_opt_main, ", tree + island rules)")) +
+  theme_minimal() +
+  theme(legend.position = "right", axis.text = element_blank(),
+        axis.title = element_blank(), panel.grid = element_blank())
+
+print(p_hc_initial)
+
+ggsave("HC_Mainland_Map_initial.png", p_hc_initial,
+       width = 10, height = 8, dpi = 300, bg = "white")
+ggsave("HC_Mainland_Map_initial.pdf", p_hc_initial,
+       width = 10, height = 8, device = cairo_pdf)
+
+hc_lookup_main <- hc_lookup_initial %>%
+  mutate(
+    HC_Cluster = case_when(
+      Country == "Norway" & HC_Cluster == "HC_Cluster_5" ~ "HC_Cluster_3",
+      TRUE ~ HC_Cluster
+    )
+  )
+
+cat("\n--- After Norway recode (HC_Cluster_5 → HC_Cluster_3) ---\n")
+print(hc_lookup_main %>% filter(Country == "Norway"))
+
+centroids <- centroids %>%
+  dplyr::select(-any_of("HC_Cluster_main")) %>%
+  left_join(hc_lookup_main %>% rename(HC_Cluster_main = HC_Cluster), by = "Country")
+
+seq_data <- seq_data %>%
+  dplyr::select(-any_of("HC_Cluster_main")) %>%
+  left_join(hc_lookup_main %>% rename(HC_Cluster_main = HC_Cluster), by = "Country")
+
+cat("\nHC_Cluster_main counts in seq_data (after recode):\n")
+print(table(seq_data$HC_Cluster_main, useNA = "ifany"))
+
+dend_main <- as.dendrogram(hc_main)
+dend_main <- color_branches(dend_main, k = k_opt_main)
+dend_main <- color_labels(dend_main, k = k_opt_main)
+
+par(mar = c(12, 4, 4, 2))
+plot(dend_main,
+     main = paste0("Hierarchical Clustering — Mainland Europe", k_opt_main, ")"),
+     ylab = "Haversine Distance (km)", cex = 0.8)
+rect.dendrogram(dend_main, k = k_opt_main,
+                border = 2:(k_opt_main + 1), lty = 2)
+
+png("Dendrogram_HC_mainland.png", width = 14, height = 8, units = "in", res = 300)
+par(mar = c(12, 4, 4, 2))
+plot(dend_main,
+     main = paste0("HC Mainland excl. Cyprus (k = ", k_opt_main, ")"),
+     ylab = "Haversine Distance (km)", cex = 0.8)
+rect.dendrogram(dend_main, k = k_opt_main,
+                border = 2:(k_opt_main + 1), lty = 2)
+dev.off()
+
+hc_main_lookup_for_map <- hc_lookup_main %>% rename(HC_Cluster_main = HC_Cluster)
+
+europe_hc_main <- ne_countries(continent = "Europe", returnclass = "sf") %>%
+  filter(name != "Russia", admin != "Iceland") %>%
+  left_join(hc_main_lookup_for_map, by = c("admin" = "Country"))
+
+n_hc_main   <- length(unique(na.omit(europe_hc_main$HC_Cluster_main)))
+hc_main_pal <- setNames(
+  brewer.pal(max(3, n_hc_main), "Set2")[seq_len(n_hc_main)],
+  sort(unique(na.omit(europe_hc_main$HC_Cluster_main)))
+)
+
+p_hc_main <- ggplot(europe_hc_main) +
+  geom_sf(aes(fill = HC_Cluster_main), colour = "black", linewidth = 0.2) +
+  scale_fill_manual(values = hc_main_pal, na.value = "gray90",
+                    name = "HC Cluster\n(recode)") +
+  coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE) +
+  labs(title = paste0("HC — Norway HC_Cluster_5 → HC_Cluster_3 (k_tree = ",
+                      k_opt_main, ")")) +
+  theme_minimal() +
+  theme(legend.position = "right", axis.text = element_blank(),
+        axis.title = element_blank(), panel.grid = element_blank())
+
+print(p_hc_main)
+
+ggsave("HC_Mainland_Map.png", p_hc_main,
+       width = 10, height = 8, dpi = 300, bg = "white")
+ggsave("HC_Mainland_Map.pdf", p_hc_main,
+       width = 10, height = 8, device = cairo_pdf)
+```
+
+
+## 7C. Combined Hierarchical Clustering and EEA biogeographic regions
+
+```{r combined-hc-biogeography}
+library(dplyr)
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(RColorBrewer)
+
+seq_data <- seq_data %>%
+  dplyr::select(-any_of(c("HC_Bio_Combined", "HC_Bio_ID", "HC_Bio5_Combined"))) %>%
+  mutate(
+    HC_Bio_Combined = case_when(
+      is.na(HC_Cluster_main) | is.na(EEA_Bioregion) ~ NA_character_,
+      TRUE ~ paste0(HC_Cluster_main, "_", EEA_Bioregion)
+    ),
+    HC_Bio_ID = case_when(
+      is.na(HC_Cluster_main) | is.na(EEA_Bioregion) ~ NA_character_,
+      TRUE ~ paste0(HC_Cluster_main, "_", EEA_Bioregion)
+    ),
+    HC_Bio5_Combined = case_when(
+      is.na(HC_Cluster_main) | is.na(Bioregion_5) ~ NA_character_,
+      TRUE ~ paste0(HC_Cluster_main, "_", Bioregion_5)
+    )
+  )
+
+eu_country_key <- function(admin_chr) {
+  case_when(
+    admin_chr %in% c("Macedonia", "Macedonia, the former Yugoslav Republic of") ~ "North Macedonia",
+    admin_chr == "Bosnia and Herz." ~ "Bosnia and Herzegovina",
+    admin_chr == "Serbia" ~ "Republic of Serbia",
+    TRUE ~ as.character(admin_chr)
+  )
+}
+
+hc_bio_lookup_for_map <- seq_data %>%
+  mutate(Country = eu_country_key(Country)) %>%
+  filter(!is.na(HC_Bio_ID)) %>%
+  distinct(Country, HC_Bio_ID, HC_Bio_Combined)
+
+serbia_hc <- hc_lookup_main %>%
+  filter(Country == "Republic of Serbia") %>%
+  slice(1) %>%
+  pull(HC_Cluster)
+
+belarus_hc <- hc_lookup_main %>%
+  filter(Country == "Belarus") %>%
+  slice(1) %>%
+  pull(HC_Cluster)
+
+montenegro_bio <- country_bioregion_primary %>%
+  filter(Country == "Montenegro") %>%
+  slice(1) %>%
+  pull(EEA_Bioregion)
+
+if (length(montenegro_bio) == 0 || is.na(montenegro_bio)) {
+  montenegro_bio <- "Alpine"
+}
+
+manual_hc_bio_map <- tibble(
+  Country = c("Belarus", "Montenegro"),
+  HC_Bio_ID = c(
+    paste(belarus_hc, "Continental", sep = "_"),
+    paste(serbia_hc, montenegro_bio, sep = "_")
+  ),
+  HC_Bio_Combined = c(
+    paste0(belarus_hc, "_", "Continental"),
+    paste0(serbia_hc, "_", montenegro_bio)
+  )
+)
+
+hc_bio_lookup_for_map <- bind_rows(
+  hc_bio_lookup_for_map,
+  anti_join(manual_hc_bio_map, hc_bio_lookup_for_map, by = "Country")
+)
+
+europe_hc_bio <- ne_countries(continent = "Europe", returnclass = "sf") %>%
+  filter(name != "Russia", admin != "Iceland") %>%
+  mutate(Country = eu_country_key(admin)) %>%
+  left_join(hc_bio_lookup_for_map, by = "Country")
+
+cat("\nMontenegro row on map:\n")
+print(
+  europe_hc_bio %>%
+    st_drop_geometry() %>%
+    filter(Country == "Montenegro") %>%
+    select(admin, Country, HC_Bio_ID, HC_Bio_Combined)
+)
+
+hc_bio_levels <- sort(unique(na.omit(europe_hc_bio$HC_Bio_Combined)))
+europe_hc_bio$HC_Bio_Combined <- factor(europe_hc_bio$HC_Bio_Combined, levels = hc_bio_levels)
+
+n_hc_bio <- length(hc_bio_levels)
+
+hc_cols <- c(
+  HC_Cluster_1_Alpine = "#CC79A7",
+  HC_Cluster_1_Arctic = "#8DA0CB",
+  HC_Cluster_1_Atlantic = "#CD5C5C",
+  HC_Cluster_1_Continental = "#BCBD22",
+  HC_Cluster_2_Alpine = "#26A69A",
+  HC_Cluster_2_Continental = "#0072B2",
+  HC_Cluster_2_Mediterranean = "lightslategray",
+  HC_Cluster_2_Pannonian = "#6B4C1B",
+  HC_Cluster_3_Alpine = "#7570B3",
+  HC_Cluster_3_Boreal = "#006D2C",
+  HC_Cluster_4_Mediterranean = "#56B4E9"
+)
+
+default_hc_bio_col <- "#BDBDBD"
+hc_bio_pal <- stats::setNames(
+  vapply(hc_bio_levels, function(lvl) {
+    if (lvl %in% names(hc_cols)) unname(hc_cols[[lvl]]) else default_hc_bio_col
+  }, character(1)),
+  hc_bio_levels
+)
+
+p_hc_bio <- ggplot(europe_hc_bio) +
+  geom_sf(aes(fill = HC_Bio_Combined), colour = "black", linewidth = 0.2) +
+  scale_fill_manual(
+    values = hc_bio_pal,
+    na.value = "gray90",
+    name = "HC and EEA bioregion\n(HC_Bio_Combined)",
+    drop = FALSE
+  ) +
+  coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE) +
+  labs(
+    title = "Combined hierarchical cluster and dominant EEA bioregion",
+    subtitle = paste0(n_hc_bio, " unique HC_bioregion strata in study countries")
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    legend.text = element_text(size = rel(0.78)),
+    legend.key.size = grid::unit(0.45, "cm"),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  )
+
+print(p_hc_bio)
+
+ggsave("HC_Bio_ID_Map.png", p_hc_bio,
+       width = 10, height = 8, dpi = 300, bg = "white")
+
+ggsave("HC_Bio_ID_Map.pdf", p_hc_bio,
+       width = 10, height = 8, device = cairo_pdf)
+```
+
+
+```{r}
+p_hc_bio <- ggplot(europe_hc_bio) +
+  geom_sf(aes(fill = HC_Bio_Combined), colour = "black", linewidth = 0.2) +
+  scale_fill_manual(
+    values = hc_bio_pal,
+    na.value = "gray90",
+    name = "HC and EEA bioregion\n(HC_Bio_Combined)",
+    drop = FALSE
+  ) +
+  coord_sf(xlim = c(-25, 45), ylim = c(34, 72), expand = FALSE) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank()
+  )
+
+print(p_hc_bio)
+
+ggsave("HC_Bio_ID_Map_no_legend.png", p_hc_bio,
+       width = 10, height = 8, dpi = 300, bg = "white")
+
+ggsave("HC_Bio_ID_Map_no_legend.pdf", p_hc_bio,
+       width = 10, height = 8, device = cairo_pdf)
+
+ggsave("HC_Bio_ID_Map_no_legend_transparent.png", p_hc_bio,
+       width = 10, height = 8, dpi = 300, bg = "transparent")
+```
+
+
+```{r}
+library(dplyr)
+
+# Define the Flyway classification mapping
+flyway_mapping <- c(
+  "Denmark" = "EA",
+  "Germany" = "EA",
+  "Poland" = "EA",
+  "Netherlands" = "EA",
+  "Sweden" = "EA",
+  "France" = "EA",
+  "United Kingdom" = "EA",
+  "Belgium" = "EA",
+  "Spain" = "EA",
+  "Ireland" = "EA",
+  "Norway" = "EA",
+  "Finland" = "EA",
+  "Latvia" = "EA",
+  "Estonia" = "EA",
+  "Lithuania" = "EA",
+  "Luxembourg" = "EA",
+  "Iceland" = "EA",
+  "Portugal" = "EA",
+  "Switzerland" = "MBS",
+  "Ukraine" = "MBS",
+  "Hungary" = "MBS",
+  "Croatia" = "MBS",
+  "Italy" = "MBS",
+  "North Macedonia" = "MBS",
+  "Czechia" = "MBS",
+  "Greece" = "MBS",
+  "Bulgaria" = "MBS",
+  "Slovakia" = "MBS",
+  "Slovenia" = "MBS",
+  "Romania" = "MBS",
+  "Austria" = "MBS",
+  "Serbia" = "MBS",
+  "Republic of Serbia" = "MBS",
+  "Montenegro" = "MBS",
+  "Belarus" = "MBS",
+  "Kosovo" = "MBS",
+  "Albania" = "MBS",
+  "Bosnia and Herzegovina" = "MBS",
+  "Moldova" = "MBS",
+  "Russia" = "WAEA",
+  "Cyprus" = "WAEA"
+)
+
+# Add the new Flyway column to the dataset
+seq_data <- seq_data %>%
+  mutate(Flyway = flyway_mapping[Country])
+
+```
+
+
+```{r}
+library(dplyr)
+library(stringr)
+library(lubridate)
+
+# Helper to normalize join keys
+normalize_id <- function(x) {
+  x %>%
+    as.character() %>%
+    str_trim() %>%
+    str_squish() %>%
+    toupper()
+}
+
+# Make sure Collection_Date is character
+seq_data <- seq_data %>%
+  mutate(
+    Isolate_Id = as.character(Isolate_Id),
+    Collection_Date = as.character(Collection_Date)
+  ) %>%
+  select(-any_of(c(
+    "Collection_Date_Fixed",
+    "Collection_Date_Fixed_chr",
+    "Collection_Date_Parsed",
+    "Collection_Date_Final",
+    "Date_Imputed"
+  )))
+
+# 1) Identify incomplete dates
+incomplete_dates <- seq_data %>%
+  filter(!is.na(Collection_Date)) %>%
+  filter(
+    grepl("^\\d{4}$", Collection_Date) |
+    grepl("^\\d{4}-\\d{2}$", Collection_Date)
+  )
+
+message("Incomplete original dates: ", nrow(incomplete_dates))
+
+# 2) Create fixed dates
+incomplete_dates <- incomplete_dates %>%
+  mutate(
+    Collection_Date_Fixed_chr = case_when(
+      grepl("^\\d{4}$", Collection_Date) ~ paste0(Collection_Date, "-07-01"),
+      grepl("^\\d{4}-\\d{2}$", Collection_Date) ~ paste0(Collection_Date, "-15"),
+      TRUE ~ Collection_Date
+    ),
+    Collection_Date_Fixed = suppressWarnings(ymd(Collection_Date_Fixed_chr))
+  )
+
+# Optional export
+incomplete_dates %>%
+  select(Isolate_Id, Collection_Date, Collection_Date_Fixed) %>%
+  write.table(
+    "incomplete_dates_summary.txt",
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+
+# 3) Normalize keys
+seq_norm <- seq_data %>%
+  mutate(Isolate_Id = normalize_id(Isolate_Id))
+
+inc_norm <- incomplete_dates %>%
+  mutate(Isolate_Id = normalize_id(Isolate_Id)) %>%
+  arrange(Isolate_Id, desc(!is.na(Collection_Date_Fixed))) %>%
+  group_by(Isolate_Id) %>%
+  summarise(
+    Collection_Date_Fixed = first(Collection_Date_Fixed[!is.na(Collection_Date_Fixed)], default = as.Date(NA)),
+    .groups = "drop"
+  )
+
+# Diagnostics
+overlap <- inner_join(
+  seq_norm %>% distinct(Isolate_Id),
+  inc_norm %>% distinct(Isolate_Id),
+  by = "Isolate_Id"
+) %>% nrow()
+
+message("Key overlap after normalization: ", overlap)
+
+# 4) Join + create final date + flag
+seq_data <- seq_norm %>%
+  left_join(inc_norm, by = "Isolate_Id") %>%
+  mutate(
+    Collection_Date_Parsed = suppressWarnings(ymd(Collection_Date)),
+    Collection_Date_Final = coalesce(Collection_Date_Fixed, Collection_Date_Parsed),
+    Date_Imputed = !is.na(Collection_Date_Fixed)
+  ) %>%
+  select(-Collection_Date_Fixed)
+
+# 5) Sanity checks
+print(table(seq_data$Date_Imputed, useNA = "ifany"))
+cat("Remaining NA final dates:", sum(is.na(seq_data$Collection_Date_Final)), "\n")
+```
+
+
+```{r}
+## Traits Summary
+library(dplyr)
+library(lubridate)
+
+seq_data <- seq_data %>%
+  mutate(Year = year(as.Date(Collection_Date_Final)))
+
+# ---- Summary counts for each trait ----
+family_counts <- seq_data %>%
+  group_by(Family) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+habitat_counts <- seq_data %>%
+  group_by(Habitat) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+trophic_level_counts <- seq_data %>%
+  group_by(Trophic_Level) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+trophic_niche_counts <- seq_data %>%
+  group_by(Trophic_Niche) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+lifestyle_counts <- seq_data %>%
+  group_by(Primary_Lifestyle) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+type_counts <- seq_data %>%
+  group_by(Type) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+flyway_counts <- seq_data %>%
+  group_by(Flyway) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+HC_Cluster_main_counts <- seq_data %>%
+  group_by(HC_Cluster_main) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+country_counts <- seq_data %>%
+  group_by(Country) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+# ---- Yearly isolate summary ----
+yearly_counts <- seq_data %>%
+  group_by(Year) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Year))
+
+# ---- Region-level isolate summary ----
+EEA_Bioregion_counts <- seq_data %>%
+  group_by(EEA_Bioregion) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+HC_Bio_combined_counts <- seq_data %>%
+  group_by(HC_Bio_Combined) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+HC_Bio5_combined_counts <- seq_data %>%
+  group_by(HC_Bio5_Combined) %>%
+  summarise(Isolate_Count = n(), .groups = "drop") %>%
+  arrange(desc(Isolate_Count))
+
+
+# ---- Print summaries ----
+print(family_counts)
+print(habitat_counts)
+print(trophic_level_counts)
+print(trophic_niche_counts)
+print(lifestyle_counts)
+print(type_counts)
+print(country_counts)
+print(flyway_counts)
+print(yearly_counts)
+print(HC_Cluster_main_counts)
+print(EEA_Bioregion_counts)
+print(HC_Bio_combined_counts)
+print(HC_Bio5_combined_counts)
+```
+
+```{r}
+library(dplyr)
+
+final_data <- seq_data %>%
+  mutate(
+    Isolate_Name = gsub(" ", "_", Isolate_Name),
+    Country = gsub(" ", "_", Country)
+  ) %>%
+  dplyr::select(
+    Isolate_Id, Isolate_Name, Habitat, Type, Country, Flyway,
+    HC_Cluster_main, EEA_Bioregion,
+    HC_Bio_Combined, Collection_Date_Final, Sequence
+  )
+
+# Save the filtered dataset as a TSV
+write.table(final_data, "final_seq_data_updated.tsv", sep="\t", row.names=FALSE, quote=FALSE)
+```
+

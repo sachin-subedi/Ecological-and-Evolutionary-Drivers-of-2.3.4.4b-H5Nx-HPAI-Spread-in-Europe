@@ -23,15 +23,20 @@ ISO38 = [
 ]
 
 cluster_map = {
-    "One":   ["ALB", "BGR", "CYP", "GRC", "XKX", "MKD", "SRB", "ROU"],
-    "Two":   ["HUN", "SVK", "POL", "UKR", "MDA", "BLR"],
-    "Three": ["DNK", "FRA", "BEL", "DEU", "ISL", "IRL", "LUX", "NLD", "PRT", "ESP", "CHE", "GBR"],
-    "Four":  ["EST", "FIN", "LVA", "LTU", "NOR", "SWE"],
-    "Five":  ["AUT", "MNE", "BIH", "HRV", "CZE", "ITA", "SVN"]
+    "HC_Cluster_1_Alpine":   ["CHE"],
+    "HC_Cluster_1_Atlantic":   ["BEL", "FRA", "NLD", "GBR", "ISL", "BLR"],
+    "HC_Cluster_1_Continental": ["DNK", "DEU", "LUX"],
+    "HC_Cluster_2_Alpine":  ["AUT", "SVK", "BIH"],
+    "HC_Cluster_2_Continental":  ["BGR", "HRV", "CZE", "XKX", "MDA", "POL", "ROU", "SVN"],
+    "HC_Cluster_2_Mediterranean":   ["ALB", "GRC", "ITA"],
+    "HC_Cluster_2_Pannonian":   ["HUN"],
+    "HC_Cluster_3_Alpine": ["NOR"],
+    "HC_Cluster_3_Boreal":  ["EST", "FIN", "LVA", "LTU", "SWE"],
+    "HC_Cluster_4_Mediterranean":  ["ESP", "PRT"]
 }
 iso_to_cluster = {iso: cluster for cluster, members in cluster_map.items() for iso in members}
 
-SHAPEFILE = "/Landcover/shapes/ne_110m_admin_0_countries.shp"
+SHAPEFILE = "ne_110m_admin_0_countries.shp"
 
 gdf_country = (
     gpd.read_file(SHAPEFILE)
@@ -115,7 +120,6 @@ print("\nGeoCluster-level temperature mean:")
 print(avg_geo)
 
 geo_out = avg_geo.copy()
-geo_out["GeoCluster"] = "GeoCluster_" + geo_out["GeoCluster"].astype(str)
 
 geo_out[["GeoCluster", "temperature"]].to_csv(
     "GeoCluster_temperature.tsv",

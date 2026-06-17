@@ -1,18 +1,15 @@
-## Windspeed
 import xarray as xr
 import rioxarray
 import geopandas as gpd
 import regionmask
 import pandas as pd
-
-import xarray as xr
+import numpy as np
 
 ds = xr.open_dataset(
     "fg_ens_mean_0.1deg_reg_2011-2024_v31.0e.nc",
-    engine="netcdf4", 
+    engine="netcdf4",
     chunks={"time": 365}
 )
-
 ds = ds.rio.write_crs(4326)
 fg = ds["fg"]
 print(ds)
@@ -25,42 +22,56 @@ ISO38 = [
 ]
 
 cluster_map = {
-    "One":   ["ALB", "BGR", "CYP", "GRC", "XKX", "MKD", "SRB", "ROU"],
-    "Two":   ["HUN", "SVK", "POL", "UKR", "MDA", "BLR"],
-    "Three": ["DNK", "FRA", "BEL", "DEU", "ISL", "IRL", "LUX", "NLD", "PRT", "ESP", "CHE", "GBR"],
-    "Four":  ["EST", "FIN", "LVA", "LTU", "NOR", "SWE"],
-    "Five":  ["AUT", "MNE", "BIH", "HRV", "CZE", "ITA", "SVN"]
+    "HC_Cluster_1_Alpine":        ["CHE"],
+    "HC_Cluster_1_Atlantic":      ["BEL", "FRA", "NLD", "GBR", "ISL", "BLR"],
+    "HC_Cluster_1_Continental":   ["DNK", "DEU", "LUX"],
+    "HC_Cluster_2_Alpine":        ["AUT", "SVK", "BIH"],
+    "HC_Cluster_2_Continental":   ["BGR", "HRV", "CZE", "XKX", "MDA", "POL", "ROU", "SVN"],
+    "HC_Cluster_2_Mediterranean": ["ALB", "GRC", "ITA"],
+    "HC_Cluster_2_Pannonian":     ["HUN"],
+    "HC_Cluster_3_Alpine":        ["NOR"],
+    "HC_Cluster_3_Boreal":        ["EST", "FIN", "LVA", "LTU", "SWE"],
+    "HC_Cluster_4_Mediterranean": ["ESP", "PRT"]
 }
 iso_to_cluster = {iso: cluster for cluster, members in cluster_map.items() for iso in members}
 
-SHAPEFILE = "/shapes/ne_110m_admin_0_countries.shp"
+SHAPEFILE = "ne_110m_admin_0_countries.shp"
+
+gdf_raw = gpd.read_file(SHAPEFILE)
+
+gdf_raw.loc[gdf_raw["SOVEREIGNT"] == "Norway", "ISO_A3"] = "NOR"
+gdf_raw.loc[gdf_raw["SOVEREIGNT"] == "France", "ISO_A3"] = "FRA"
+gdf_raw.loc[gdf_raw["SOVEREIGNT"] == "Kosovo", "ISO_A3"] = "XKX"
 
 gdf_country = (
-    gpd.read_file(SHAPEFILE)
+    gdf_raw
     .loc[lambda d: d["ISO_A3"].isin(ISO38)]
     .assign(GeoCluster=lambda d: d["ISO_A3"].map(iso_to_cluster))
     .dropna(subset=["GeoCluster"])
 )
 
+print(gdf_country[["SOVEREIGNT", "ISO_A3", "GeoCluster"]])
+
+if gdf_country.crs is None:
+    gdf_country = gdf_country.set_crs("EPSG:4326")
+else:
+    gdf_country = gdf_country.to_crs("EPSG:4326")
+
 country_cluster_lookup = gdf_country[["SOVEREIGNT", "ISO_A3", "GeoCluster"]].drop_duplicates()
 
 gdf = gdf_country.dissolve(by="GeoCluster").reset_index()
+gdf = gdf.reset_index(drop=True)
+print(gdf[["GeoCluster"]])
 
-regions = regionmask.Regions(
-    outlines=gdf.geometry.values,
-    names=gdf.GeoCluster.values,
-    numbers=range(len(gdf))
-)
+mask2d = regionmask.mask_geopandas(gdf, fg.longitude, fg.latitude)
+print("Unique mask values:", np.unique(mask2d.values[~np.isnan(mask2d.values)]))
 
-mask2d = regions.mask(lon_or_obj=fg["longitude"], lat=fg["latitude"])
+cluster_means_list = []
+for row_idx, row in gdf.iterrows():
+    mean_fg = fg.where(mask2d == row_idx).mean(dim=("latitude", "longitude"))
+    cluster_means_list.append(mean_fg.assign_coords(GeoCluster=row.GeoCluster))
 
-cluster_means = (
-    xr.concat(
-        [fg.where(mask2d == i).mean(dim=("latitude", "longitude")) for i in range(len(gdf))],
-        dim="GeoCluster"
-    )
-    .assign_coords(GeoCluster=gdf.GeoCluster.values)
-)
+cluster_means = xr.concat(cluster_means_list, dim="GeoCluster")
 
 out_df = cluster_means.to_dataframe(name="fg_ms").reset_index()
 
@@ -101,29 +112,25 @@ season_country = (
     .groupby(["Country", "GeoCluster"], as_index=False)
     .agg(windspeed_seasonality=("windspeed_sd", "mean"))
 )
+
 avg_geo = (
     avg_country
     .groupby("GeoCluster", as_index=False)
     .agg(windspeed=("windspeed", "mean"))
 )
 
-print("Country-level wind mean:")
-print(avg_country.head(3))
+print("\nCountry-level wind mean:")
+print(avg_country)
 
 print("\nCountry-level wind seasonality:")
-print(season_country.head(3))
+print(season_country)
 
 print("\nGeoCluster-level wind mean:")
 print(avg_geo)
 
-
-geo_out = avg_geo.copy()
-geo_out["GeoCluster"] = "GeoCluster_" + geo_out["GeoCluster"].astype(str)
-
-geo_out[["GeoCluster", "windspeed"]].to_csv(
+avg_geo[["GeoCluster", "windspeed"]].to_csv(
     "GeoCluster_windspeed.tsv",
     sep="\t",
     index=False
 )
-
-print(geo_out)
+print(avg_geo)
