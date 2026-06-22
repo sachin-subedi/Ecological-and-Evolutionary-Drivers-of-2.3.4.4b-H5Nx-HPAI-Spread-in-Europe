@@ -1,15 +1,23 @@
+setwd("combined_traits/results/rates/sig")
+
 library(dplyr)
 library(readr)
 
-setwd("~/Combined")
-df <- read_csv("HG_bf_Subsample1.csv")
+cols <- c("from","to","mean_indicator","mean_rate","median_rate",
+          "hpd_lower","hpd_upper","bayes_factor","subsample")
 
-df_rounded <- df %>%
-  mutate(
-    across(
-      where(is.numeric),
-      ~ ifelse(is.infinite(.x), .x, round(.x, 2))
-    )
-  )
+process_file <- function(infile, outbase) {
+  df <- read_csv(infile, show_col_types = FALSE)
+  if (!"subsample" %in% names(df) && "sampling" %in% names(df)) {
+    df <- df %>% rename(subsample = sampling)
+  }
+  df <- df %>%
+    select(all_of(cols)) %>%
+    mutate(across(where(is.numeric), ~ round(.x, 3)))
+  write_csv(df, paste0(outbase, "_sig.csv"))
+}
 
-write_csv(df_rounded, "HG_bf_Subsample1_dec.csv")
+process_file("GeoCluster_bf_combined.csv", "GeoCluster_bf_combined")
+process_file("Habitat_bf_all_sampling.csv", "Habitat_bf_all_sampling")
+process_file("HG_bf_combined.csv", "HG_bf_combined")
+

@@ -1,4 +1,4 @@
-setwd("Combined/")
+setwd("results/rates/Combined/")
 
 options(scipen = 999)
 
@@ -15,55 +15,37 @@ datasets <- list(
 )
 
 hc_region_states <- list(
-  "HC1_Alp" = c("CM", "FO", "GW", "WT"),
-  "HC1_Atl" = c("CM", "FA", "FO", "GW", "UB", "WT"),
+  "HC1_Atl" = c("CM", "FA", "FO", "GW", "WT"),
   "HC1_Con" = c("CM", "FA", "FO", "GW", "WT"),
-  "HC2_Alp" = c("CM", "FA", "FO", "GW", "WT"),
-  "HC2_Con" = c("CM", "FA", "FO", "GW", "UB", "WT"),
-  "HC2_Med" = c("CM", "FA", "FO", "GW", "UB", "WT"),
-  "HC2_Pan" = c("CM", "FA", "FO", "GW", "WT"),
-  "HC3_Alp" = c("CM", "FA", "FO", "GW", "WT"),
-  "HC3_Bor" = c("CM", "FA", "FO", "GW", "WT"),
-  "HC4_Med" = c("CM", "FA", "FO", "GW", "WT")
+  "HC2_Con" = c("CM", "FA", "FO", "GW", "WT"),
+  "HC3_Bor" = c("CM", "FA", "FO", "GW", "WT")
 )
 
 group_cols <- list(
-  "HC1_Alp" = c(alpha("#0072B2",        0.25), "#0072B2"),
-  "HC1_Atl" = c(alpha("#CD5C5C",        0.25), "#CD5C5C"),
-  "HC1_Con" = c(alpha("#BCBD22",        0.25), "#BCBD22"),
-  "HC2_Alp" = c(alpha("#26A69A",        0.25), "#26A69A"),
-  "HC2_Con" = c(alpha("#CC79A7",        0.25), "#CC79A7"),
-  "HC2_Med" = c(alpha("lightslategray", 0.25), "lightslategray"),
-  "HC2_Pan" = c(alpha("#6B4C1B",        0.25), "#6B4C1B"),
-  "HC3_Alp" = c(alpha("#7570B3",        0.25), "#7570B3"),
-  "HC3_Bor" = c(alpha("#006D2C",        0.25), "#006D2C"),
-  "HC4_Med" = c(alpha("#56B4E9",        0.25), "#56B4E9")
+  "HC1_Atl" = c(alpha("#CD5C5C", 0.25), "#CD5C5C"),
+  "HC1_Con" = c(alpha("#BCBD22", 0.25), "#BCBD22"),
+  "HC2_Con" = c(alpha("#0072B2", 0.25), "#0072B2"),
+  "HC3_Bor" = c(alpha("#006D2C", 0.25), "#006D2C")
 )
 
 group_titles <- c(
-  "HC1_Alp" = "Central\nAlpine",
   "HC1_Atl" = "Atlantic",
   "HC1_Con" = "Western\nContinental",
-  "HC2_Alp" = "Eastern\nAlpine",
   "HC2_Con" = "Eastern\nContinental",
-  "HC2_Med" = "Southeast\nMediterranean",
-  "HC2_Pan" = "Pannonian",
-  "HC3_Alp" = "Scandinavian\nHighlands",
-  "HC3_Bor" = "Boreal\nBaltic",
-  "HC4_Med" = "Iberian"
+  "HC3_Bor" = "Boreal\nBaltic"
 )
 
 groups_keep <- names(hc_region_states)
 
 rename_labels <- function(x) {
   hab_map <- c(CM = "Coastal", FA = "Farm", FO = "Forest",
-               GW = "Grassland", WT = "Wetland", UB = "Urban")
+               GW = "Grassland", WT = "Wetland")
   x_chr <- as.character(x)
   x_chr[grepl("^GAP", x_chr) | is.na(x_chr)] <- ""
   idx <- x_chr != "" & !grepl("^GAP", x_chr)
   if (any(idx)) {
-    codes        <- sub("^HC\\d+_[A-Za-z]+_", "", x_chr[idx])
-    x_chr[idx]  <- ifelse(codes %in% names(hab_map), hab_map[codes], codes)
+    codes       <- sub("^HC\\d+_[A-Za-z]+_", "", x_chr[idx])
+    x_chr[idx] <- ifelse(codes %in% names(hab_map), hab_map[codes], codes)
   }
   x_chr
 }
@@ -77,7 +59,7 @@ LEG_BARHEIGHT <- unit(6,  "pt")
 panel_theme <- theme_minimal(base_size = 16) +
   theme(
     panel.grid  = element_blank(),
-    plot.margin = margin(t = 10, r = 10, b = 5, l = 5),
+    plot.margin = margin(t = 10, r = 10, b = 5, l = 50),
     legend.position      = "bottom",
     legend.box           = "vertical",
     legend.direction     = "horizontal",
@@ -90,6 +72,7 @@ panel_theme <- theme_minimal(base_size = 16) +
     legend.text          = element_text(size = 14)
   )
 
+# ---- Build ordered node list with GAP separators ----------------------------
 nodes <- unlist(
   lapply(seq_along(groups_keep), function(i) {
     g   <- groups_keep[i]
@@ -108,7 +91,6 @@ side_label_df <- tibble(
   ymid  = unname(group_y_mids)
 )
 
-# ── Loop over datasets ────────────────────────────────────────────────────────
 for (ds in datasets) {
   
   input_file <- ds$input_file
@@ -244,7 +226,7 @@ for (ds in datasets) {
   p <- p +
     annotate(
       "text",
-      x          = -0.6,
+      x          = -0.2,
       y          = side_label_df$ymid,
       label      = side_label_df$label,
       angle      = 90,
@@ -258,12 +240,12 @@ for (ds in datasets) {
   
   print(p)
   
-  out_file <- paste0("Regions_all_HG_Rates_heatmap_", tag, ".png")
+  out_file <- paste0("HG_Rates_heatmap_4regions_", tag, ".png")
   ggsave(
     filename = out_file,
     plot     = p,
-    width    = 22,
-    height   = 19,
+    width    = 14,
+    height   = 10,
     bg       = "white",
     dpi      = 300
   )

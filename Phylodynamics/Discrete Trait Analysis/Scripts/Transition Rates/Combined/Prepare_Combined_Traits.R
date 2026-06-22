@@ -1,114 +1,66 @@
-setwd("~/combined/")
+setwd("combined_traits/results/rates/Combined/")
 
-data1 <- read.delim("subsampled_data.tsv", sep="\t", stringsAsFactors=FALSE)
-colnames(data1)
 library(dplyr)
-library(stringr)
 library(readr)
 
-parse_cluster_num <- function(x) {
-  tok <- x %>%
-    str_replace("^\\s*GeoCluster[_\\s-]*", "") %>%
-    str_trim()
-  
-  case_when(
-    tok %in% c("1","2","3","4","5") ~ tok,
-    str_to_lower(tok) == "one"   ~ "1",
-    str_to_lower(tok) == "two"   ~ "2",
-    str_to_lower(tok) == "three" ~ "3",
-    str_to_lower(tok) == "four"  ~ "4",
-    str_to_lower(tok) == "five"  ~ "5",
-    TRUE ~ NA_character_
-  )
-}
-
-data1 <- data1 %>%
-  mutate(
-    habitat_raw = Habitat %>% str_trim(),
-    
-    habitat_code = case_when(
-      str_detect(habitat_raw, regex("^Wetland(s)?$", ignore_case = TRUE)) ~ "WW",
-      str_detect(habitat_raw, regex("^Farm$",        ignore_case = TRUE)) ~ "FD",
-      str_detect(habitat_raw, regex("^Grassland$",   ignore_case = TRUE)) ~ "GW",
-      str_detect(habitat_raw, regex("^(Human_Modified|Rock|Shrubland|Forest|Woodland)$", ignore_case = TRUE)) ~ "RSFWW",
-      str_detect(habitat_raw, regex("^Urban$",       ignore_case = TRUE)) ~ "UH",
-      str_detect(habitat_raw, regex("^(Coastal|Marine)$", ignore_case = TRUE)) ~ "CMW",
-      TRUE ~ "O"  # Others
-    ),
-    
-    cluster_num = parse_cluster_num(GeoCluster),
-    
-    HG_compact = if_else(!is.na(cluster_num), paste0(habitat_code, cluster_num), NA_character_)
-  ) %>%
-  select(-habitat_raw)
-
-write_tsv(data1, "combined_compact_subsampled_data3.tsv")
-
-## Fasta file
-library(readr)
-library(stringr)
-library(dplyr)
-
-base_dir <- "~/combined/"
-tsv_path  <- file.path(base_dir, "combined_compact_subsampled_data3.tsv")
-fasta_out <- file.path(base_dir, "combined_compact_subsampled_data3.fasta")
-
-subsampled_data1 <- read.delim(
-  tsv_path, sep = "\t",
-  stringsAsFactors = FALSE, check.names = FALSE
+region_labels <- c(
+  "HC1_Alp" = "Central Alpine",
+  "HC1_Atl" = "Atlantic",
+  "HC1_Con" = "Western Continental",
+  "HC2_Alp" = "Eastern Alpine",
+  "HC2_Con" = "Eastern Continental",
+  "HC2_Med" = "Southeast Mediterranean",
+  "HC2_Pan" = "Pannonian",
+  "HC3_Alp" = "Scandinavian Highlands",
+  "HC3_Bor" = "Boreal Baltic",
+  "HC4_Med" = "Iberian"
 )
 
-write_fasta <- function(df, out_path,
-                        header_fields = c("Isolate_Id","Isolate_Name","Habitat","Type",
-                                          "Country","GeoCluster","HG_compact","Collection_Date_Final"),
-                        seq_field = "Sequence",
-                        line_width = 60,
-                        skip_empty_seq = TRUE) {
-  
-  missing_cols <- setdiff(header_fields, names(df))
-  if (length(missing_cols) > 0) {
-    df[missing_cols] <- NA_character_
-  }
-  if (!seq_field %in% names(df)) {
-    stop(sprintf("Sequence field '%s' is missing.", seq_field))
-  }
-  
-  con <- file(out_path, open = "wt", encoding = "UTF-8")
-  on.exit(close(con), add = TRUE)
-  
-  n_written <- 0L
-  
-  for (i in seq_len(nrow(df))) {
-    row <- df[i, , drop = FALSE]
-    
-    vals <- vapply(header_fields, function(nm) {
-      v <- row[[nm]]
-      if (is.null(v) || is.na(v) || (is.character(v) && nchar(trimws(v)) == 0)) "NA" else as.character(v)
-    }, FUN.VALUE = character(1))
-    
-    header <- paste0(">", paste(vals, collapse = "|"))
-    
-    seq_raw <- row[[seq_field]]
-    if (is.null(seq_raw) || is.na(seq_raw)) seq_raw <- ""
-    seq_str <- gsub("\\s+", "", as.character(seq_raw))
-    
-    if (skip_empty_seq && nchar(seq_str) == 0) next
-    
-    if (nchar(seq_str) > 0 && is.finite(line_width) && line_width > 0) {
-      seq_lines <- strwrap(seq_str, width = line_width)
+hab_map <- c(
+  CM = "Coastal",
+  FA = "Farm",
+  FO = "Forest",
+  GW = "Grassland",
+  WT = "Wetland",
+  UB = "Urban"
+)
+
+recode_label <- function(x) {
+  x_chr <- as.character(x)
+  sapply(x_chr, function(val) {
+    parts    <- strsplit(val, "_")[[1]]
+    hab_code <- tail(parts, 1)                        # e.g. "WT"
+    geo_code <- paste(parts[-length(parts)], collapse = "_")  # e.g. "HC1_Atl"
+    geo_full <- region_labels[geo_code]
+    hab_full <- hab_map[hab_code]
+    if (!is.na(geo_full) && !is.na(hab_full)) {
+      paste(geo_full, hab_full)                       # "Atlantic Wetland"
     } else {
-      seq_lines <- seq_str
+      val
     }
-    
-    writeLines(header, con)
-    writeLines(seq_lines, con)
-    n_written <- n_written + 1L
-  }
-  
-  message(sprintf("Wrote %d FASTA records to: %s", n_written, out_path))
+  }, USE.NAMES = FALSE)
 }
 
-write_fasta(subsampled_data1, fasta_out)
-cat("FASTA file saved as:", fasta_out, "\n")
+all_levels <- as.vector(outer(unname(region_labels), unname(hab_map), paste))
 
+df_equal <- read_csv("HG_bf_equal.csv") %>%
+  mutate(subsample = "equal")
 
+df_proportional <- read_csv("HG_bf_proportional.csv") %>%
+  mutate(subsample = "proportional")
+
+df_stratified <- read_csv("HG_bf_stratified.csv") %>%
+  mutate(subsample = "stratified")
+
+df_combined <- bind_rows(df_equal, df_proportional, df_stratified) %>%
+  mutate(
+    from      = recode_label(from),
+    to        = recode_label(to),
+    from      = factor(from, levels = all_levels),
+    to        = factor(to,   levels = all_levels),
+    subsample = factor(subsample, levels = c("equal", "proportional", "stratified"))
+  )
+
+write_csv(df_combined, "HG_bf_combined.csv")
+
+cat("Done! Combined dimensions:", nrow(df_combined), "rows x", ncol(df_combined), "cols\n")

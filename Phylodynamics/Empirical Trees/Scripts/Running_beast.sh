@@ -15,4 +15,4 @@
 cd $SLURM_SUBMIT_DIR
 
 ml load  Beast/1.10.4-GCC-12.3.0-CUDA-12.1.1
-beast -threads 16 -beagle -beagle_GPU -overwrite emp_combined_compact_subsampled_data1_AL.xml
+beast -threads 16 -beagle -beagle_GPU -overwrite emp_rep1_equal_HG.xml

@@ -20,8 +20,8 @@ count_trees <- function(tree_file) {
   sum(grepl("tree STATE", lines))
 }
 
-input_path <- "empirical_subsampled3.trees"
-output_path <- "empirical_subsampled3_500.trees"
+input_path <- "empirical_equal_rep1.trees"
+output_path <- "empirical_equal_rep1_500.trees"
 
 subsample_trees(input_path, output_path, n_trees = 500)
 num_trees <- count_trees(output_path)

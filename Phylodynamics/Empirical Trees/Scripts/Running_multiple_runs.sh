@@ -18,7 +18,7 @@ for i in $(seq 1 "$NRUNS"); do
     ln -sf "../$XML_IN"           "$RUNDIR/$XML_IN"
     cp      "$SBATCH_TEMPLATE"    "$RUNDIR/run.sh"
 
-    sed -i "s|emp_combined_compact_subsampled_data1_AL.xml|$XML_IN|" "$RUNDIR/run.sh"
+    sed -i "s|emp_rep1_equal_HG.xml|$XML_IN|" "$RUNDIR/run.sh"
 
     chmod +x "$RUNDIR/run.sh"
 
