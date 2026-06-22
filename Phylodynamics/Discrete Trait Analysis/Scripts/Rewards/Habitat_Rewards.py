@@ -13,7 +13,7 @@ import baltic as bt
 mpl.rcParams["font.family"] = "sans-serif"
 mpl.rcParams["font.sans-serif"] = ["Arial"]
 
-ANCHOR_DEC_YEAR  = 2025.2520547945205
+ANCHOR_DEC_YEAR = 2025.2520547945205
 
 HABITATS = [
     "Coastal", "Farm", "Forest", "Grassland", "Human_Modified",
@@ -33,6 +33,28 @@ HABITAT_COLORS = {
     "Rock":           "#7570B3",
     "Wetland":        "#006D2C",
 }
+
+DATASETS = [
+    {
+        "trees_file": (
+            "Habitat_history_equal_combined.trees"
+        ),
+        "out_png": "Habitat_Reward_equal_NL.png",
+    },
+    {
+        "trees_file": (
+            "Habitat_history_proportional_combined.trees"
+        ),
+        "out_png": "Habitat_Reward_proportional_NL.png",
+    },
+    {
+        "trees_file": (
+            "Habitat_history_stratified_combined.trees"
+        ),
+        "out_png": "Habitat_Reward_stratified_NL.png",
+    },
+]
+
 
 def lighten_color(color, amount=0.5):
     r, g, b = mcolors.to_rgb(color)
@@ -70,8 +92,8 @@ def make_habitat_reward_plot(trees_file, out_png):
                 print(f"Skipped tree {tree_counter} (parse error: {e})")
                 continue
 
-            month_habitat_raw   = {}
-            month_totals_raw    = {}
+            month_habitat_raw = {}
+            month_totals_raw  = {}
 
             for node in tree.Objects:
                 if not node.traits:
@@ -110,8 +132,8 @@ def make_habitat_reward_plot(trees_file, out_png):
     for (month, hab), summed_prop in posterior_prop.items():
         mean_rows.append({
             "year_month": month,
-            "habitat": hab,
-            "prop": summed_prop / tree_counter
+            "habitat":    hab,
+            "prop":       summed_prop / tree_counter
         })
 
     mean_df = pd.DataFrame(mean_rows)
@@ -163,59 +185,19 @@ def make_habitat_reward_plot(trees_file, out_png):
     year_ticks = pd.date_range(plot_df.index.min(), plot_df.index.max(), freq="YS")
     ax.set_xticks(year_ticks)
     ax.set_xticklabels([d.year for d in year_ticks], fontsize=18)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
     ax.set_xlabel("", fontsize=18)
     ax.set_ylabel("Reward proportion", fontsize=18)
     ax.tick_params(axis="y", labelsize=18)
 
-    legend_labels = [
-        "Coastal", "Farm", "Forest", "Grassland", "Human Modified",
-        "Marine", "Shrubland", "Urban", "Woodland", "Rock", "Wetland"
-    ]
-
-    fig.subplots_adjust(top=0.80, bottom=0.12, left=0.10, right=0.98)
-
-    handles, _ = ax.get_legend_handles_labels()
     ax.legend().remove()
-
-    fig.legend(
-        handles,
-        legend_labels,
-        loc="upper center",
-        ncol=4,
-        frameon=False,
-        fontsize=12
-    )
 
     fig.savefig(out_png, dpi=600, bbox_inches="tight")
     print(f"✓ saved plot to {out_png}")
+    plt.show()
     plt.close(fig)
 
+
 if __name__ == "__main__":
-    subsamples = [
-        dict(
-            tag="Subsample1",
-            trees_file=(
-                "Habitat_history_Subsample1_combined.trees"
-            ),
-        ),
-        dict(
-            tag="Subsample2",
-            trees_file=(
-                "Habitat_history_Subsample2_combined.trees"
-            ),
-        ),
-        dict(
-            tag="Subsample3",
-            trees_file=(
-                "Habitat_history_Subsample3_combined.trees"
-            ),
-        ),
-    ]
-
-    for cfg in subsamples:
-        tag       = cfg["tag"]
-        trees_file = cfg["trees_file"]
-        out_png   = f"Habitat_RewardProportion_{tag}.png"
-
-        print(f"\n==== Processing {tag} ====")
-        make_habitat_reward_plot(trees_file, out_png)
+    for ds in DATASETS:
+        make_habitat_reward_plot(ds["trees_file"], ds["out_png"])

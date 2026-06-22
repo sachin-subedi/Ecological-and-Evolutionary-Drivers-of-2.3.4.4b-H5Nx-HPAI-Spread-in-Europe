@@ -4,6 +4,8 @@ library(purrr)
 library(coda)
 library(readr)
 
+setwd("Region/")
+
 find_k <- function(m){
   for (n in 1:m) {
     if (m == n * (n - 1)) return(n)
@@ -21,16 +23,16 @@ extract_last <- function(x){
   parts[, ncol(parts)]
 }
 
-workdir   <- "~/Library/CloudStorage/OneDrive-UniversityofGeorgia/EU_H5/may/data/Again/after_draft/pipeline/reproduce/rates/Host"
-setwd(workdir)
 
-burnin_pc <- 50   # % burn-in to discard
+burnin_pc <- 50
 
 log_files <- c(
-  "Host_rates_Subsample1_combined.log",
-  "Host_rates_Subsample2_combined.log",
-  "Host_rates_Subsample3_combined.log"
+  "Region_rates_equal_combined.log",
+  "Region_rates_proportional_combined.log",
+  "Region_rates_stratified_combined.log"
 )
+
+sampling_labels <- c("equal", "proportional", "stratified")
 
 process_log_file <- function(log_file, burnin_pc = 50) {
   
@@ -39,9 +41,8 @@ process_log_file <- function(log_file, burnin_pc = 50) {
   n_burn <- floor(burnin_pc / 100 * nrow(log_df))
   log_df <- dplyr::slice(log_df, (n_burn + 1):dplyr::n())
   
-  rate_cols <- grep("^Host\\.rates\\.", names(log_df), value = TRUE)
+  rate_cols <- grep("^Region\\.rates\\.", names(log_df), value = TRUE)
   
-  # infer k and prior inclusion probability
   k <- find_k(length(rate_cols))
   if (is.null(k)) stop("Could not infer k from number of rate columns in ", log_file)
   
@@ -71,16 +72,16 @@ process_log_file <- function(log_file, burnin_pc = 50) {
   summaries
 }
 
-for (log_file in log_files) {
+for (i in seq_along(log_files)) {
   
-  # e.g. "Host_rates_Subsample1_combined.log" -> "Subsample1"
-  subs_label <- gsub("Host_rates_(Subsample[0-9]+)_combined\\.log", "\\1", log_file)
+  log_file   <- log_files[i]
+  samp_label <- sampling_labels[i]
   
-  message("Processing: ", log_file, "  (", subs_label, ")")
+  message("Processing: ", log_file, "  (", samp_label, ")")
   
   summaries <- process_log_file(log_file, burnin_pc = burnin_pc)
   
-  out_file <- paste0("Host_bf_", subs_label, ".csv")
+  out_file <- paste0("Region_bf_", samp_label, ".csv")
   write_csv(summaries, out_file)
   
   message("✓ ", out_file, " saved.")
@@ -88,8 +89,8 @@ for (log_file in log_files) {
 
 all_summaries <- map2_dfr(
   log_files,
-  c("Subsample1", "Subsample2", "Subsample3"),
-  ~ process_log_file(.x, burnin_pc) %>% mutate(subsample = .y)
+  sampling_labels,
+  ~ process_log_file(.x, burnin_pc) %>% mutate(sampling = .y)
 )
 
-write_csv(all_summaries, "Host_bf_all_subsamples.csv")
+write_csv(all_summaries, "Region_bf_all_sampling.csv")

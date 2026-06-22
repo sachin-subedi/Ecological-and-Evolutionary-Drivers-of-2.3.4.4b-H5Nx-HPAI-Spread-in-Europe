@@ -1,16 +1,15 @@
 options(scipen = 999)
-
 library(dplyr)
 library(ggplot2)
 
-setwd("~/Habitat")
+setwd("Habitat/")
 
 bf_files <- c(
-  "Habitat_bf_Subsample1.csv",
-  "Habitat_bf_Subsample2.csv",
-  "Habitat_bf_Subsample3.csv"
+  "Habitat_bf_CI_equal.csv",
+  "Habitat_bf_CI_proportional.csv",
+  "Habitat_bf_CI_stratified.csv"
 )
-tags <- c("Subsample1", "Subsample2", "Subsample3")
+tags <- c("equal", "proportional", "stratified")
 
 habitat_cols_solid <- c(
   "Coastal"        = "#0072B2",
@@ -33,7 +32,6 @@ lighten_palette <- function(cols, factor = 0.5) {
     rgb(new_col[1], new_col[2], new_col[3], maxColorValue = 255)
   })
 }
-
 habitat_cols_light <- lighten_palette(habitat_cols_solid, factor = 0.5)
 
 supported_pairs <- tibble::tribble(
@@ -59,16 +57,23 @@ for (i in seq_along(bf_files)) {
   
   df <- read.csv(file_i) %>%
     rename(
-      From = from,
-      To   = to,
-      Rate = mean_rate
+      From  = from,
+      To    = to,
+      Rate  = mean_real_rate, 
+      Lower = ci_lower,
+      Upper = ci_upper
     )
   
   df_bar <- df %>%
     dplyr::semi_join(supported_pairs, by = c("From", "To")) %>%
-    dplyr::filter(bayes_factor >= 10) %>% 
+    dplyr::filter(bayes_factor >= 10) %>%
     dplyr::group_by(From, To) %>%
-    dplyr::summarise(Rate = mean(Rate), .groups = "drop") %>%
+    dplyr::summarise(
+      Rate  = mean(Rate),
+      Lower = mean(Lower),
+      Upper = mean(Upper),
+      .groups = "drop"
+    ) %>%
     dplyr::mutate(
       Transition = paste(From, "\u2192", To)
     ) %>%
@@ -80,6 +85,12 @@ for (i in seq_along(bf_files)) {
   p_bar <- ggplot(df_bar,
                   aes(x = Transition, y = Rate, fill = From)) +
     geom_col() +
+    geom_errorbar(                              # ← 95% credible interval error bars
+      aes(ymin = Lower, ymax = Upper),
+      width     = 0.3,
+      linewidth = 0.7,
+      color     = "grey30"
+    ) +
     coord_flip() +
     scale_fill_manual(values = habitat_cols_light, name = "Source habitat") +
     labs(
@@ -97,7 +108,7 @@ for (i in seq_along(bf_files)) {
   
   print(p_bar)
   
-  out_name <- paste0("Habitat_Rates_barplot_", tag_i, "_light0.5.png")
+  out_name <- paste0("Habitat_Rates_barplot_", tag_i, "_light0.5_CI.png")
   ggsave(
     filename = out_name,
     plot     = p_bar,
@@ -105,8 +116,16 @@ for (i in seq_along(bf_files)) {
     height   = 10,
     bg       = "white",
     dpi      = 300
-  )
+  ) 
   
-  message("✓ saved: ", out_name)
+  message("\u2713 saved: ", out_name)
 }
 
+df %>%
+  mutate(
+    hpd_width = hpd_upper - hpd_lower,
+    ci_width  = Upper - Lower,
+    diff      = ci_width - hpd_width
+  ) %>%
+  select(From, To, hpd_lower, hpd_upper, Lower, Upper, hpd_width, ci_width, diff) %>%
+  arrange(desc(abs(diff)))

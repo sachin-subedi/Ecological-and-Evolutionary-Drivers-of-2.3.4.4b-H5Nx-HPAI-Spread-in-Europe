@@ -4,6 +4,8 @@ library(purrr)
 library(coda)
 library(readr)
 
+setwd("Habitat/")
+
 find_k <- function(m){
   for (n in 1:m) {
     if (m == n * (n - 1)) return(n)
@@ -21,16 +23,15 @@ extract_last <- function(x){
   parts[, ncol(parts)]
 }
 
-workdir   <- "~/Habitat"
-setwd(workdir)
-
 burnin_pc <- 50
 
 log_files <- c(
-  "Habitat_rates_Subsample1_combined.log",
-  "Habitat_rates_Subsample2_combined.log",
-  "Habitat_rates_Subsample3_combined.log"
+  "Habitat_rates_equal_combined.log",
+  "Habitat_rates_proportional_combined.log",
+  "Habitat_rates_stratified_combined.log"
 )
+
+sampling_labels <- c("equal", "proportional", "stratified")
 
 process_log_file <- function(log_file, burnin_pc = 50) {
   
@@ -62,6 +63,8 @@ process_log_file <- function(log_file, burnin_pc = 50) {
       median_rate    = median(real_vec),
       hpd_lower      = HPDinterval(as.mcmc(real_vec), prob = 0.95)[1, "lower"],
       hpd_upper      = HPDinterval(as.mcmc(real_vec), prob = 0.95)[1, "upper"],
+      ci_lower       = unname(quantile(real_vec, 0.025)),   # equal-tailed 95% credible interval
+      ci_upper       = unname(quantile(real_vec, 0.975)),   # equal-tailed 95% credible interval
       bayes_factor   = (mean(ind_vec) * (1 - q_prior)) /
         ((1 - mean(ind_vec)) * q_prior)
     )
@@ -70,24 +73,25 @@ process_log_file <- function(log_file, burnin_pc = 50) {
   summaries
 }
 
-for (log_file in log_files) {
+for (i in seq_along(log_files)) {
   
-  subs_label <- gsub("Habitat_rates_(Subsample[0-9]+)_combined\\.log", "\\1", log_file)
+  log_file   <- log_files[i]
+  samp_label <- sampling_labels[i]
   
-  message("Processing: ", log_file, "  (", subs_label, ")")
+  message("Processing: ", log_file, "  (", samp_label, ")")
   
   summaries <- process_log_file(log_file, burnin_pc = burnin_pc)
   
-  out_file <- paste0("Habitat_bf_", subs_label, ".csv")
+  out_file <- paste0("Habitat_bf_CI_", samp_label, ".csv")
   write_csv(summaries, out_file)
   
-  message("✓ ", out_file, " saved.")
+  message("\u2713 ", out_file, " saved.")
 }
 
 all_summaries <- map2_dfr(
   log_files,
-  c("Subsample1", "Subsample2", "Subsample3"),
-  ~ process_log_file(.x, burnin_pc) %>% mutate(subsample = .y)
+  sampling_labels,
+  ~ process_log_file(.x, burnin_pc) %>% mutate(sampling = .y)
 )
-
-write_csv(all_summaries, "Habitat_bf_all_subsamples.csv")
+write_csv(all_summaries, "Habitat_bf_all_sampling.csv")
+message("\u2713 Habitat_bf_all_sampling.csv saved.")
