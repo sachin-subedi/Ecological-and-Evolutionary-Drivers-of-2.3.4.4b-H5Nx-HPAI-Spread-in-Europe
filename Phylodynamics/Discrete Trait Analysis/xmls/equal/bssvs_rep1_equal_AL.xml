@@ -11049,7 +11049,7 @@
 					<parameter idref="skygrid.precision"/>
 				</gammaPrior>
  -->
-  				<poissonPrior mean="6.0" offset="0.0">
+  				<poissonPrior mean="51.0" offset="0.0">
 					<statistic idref="HG.nonZeroRates"/>
 				</poissonPrior>
 				<uniformPrior lower="0.0" upper="1.0">

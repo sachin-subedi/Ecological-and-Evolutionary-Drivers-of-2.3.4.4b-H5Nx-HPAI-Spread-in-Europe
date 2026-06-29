@@ -10241,7 +10241,7 @@
 	</coalescentSimulator>
  -->
 	
-  	 <empiricalTreeDistributionModel id="treeModel" fileName="rep1_proportional_combined_empiricalHG500.trees">
+  	 <empiricalTreeDistributibssvs_rep3_proportional_ALonModel id="treeModel" fileName="/scratch/ss11645/combined/beast/proportional/rep1/emptrees/combined_trees/rep1_proportional_combined_empiricalHG500.trees">
 		<taxa idref="taxa"/>
 		<nodeTraits rootNode="false" internalNodes="false" leafNodes="true" traitDimension="46" name="HG">
 			<parameter id="leafTraits"/>
