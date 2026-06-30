@@ -20,7 +20,6 @@ mpl.rcParams.update({
 
 TRAIT = "GeoCluster"
 
-# ── Palette (10 clusters) ─────────────────────────────────────────────────────
 COLORS_FULL = {
     "HC_Cluster_1_Alpine"        : "#CC79A7",
     "HC_Cluster_1_Atlantic"      : "#CD5C5C",
@@ -51,20 +50,49 @@ LABEL_MAP_FULL = {
 
 YEAR_MIN, YEAR_MAX = 2015.5, 2026
 YEAR_TICKS         = np.arange(2016, 2026, 1)
-
 DATASETS = [
     {
-        "tag"         : "equal",
+        "tag"         : "equal_rep1",
         "tree_full"   : "bssvs_rates_equal.tree",
         "trees_violin": "bssvs_rates_equal_combined.trees",
     },
     {
-        "tag"         : "proportional",
+        "tag"         : "equal_rep2",
+        "tree_full"   : "bssvs_rates_equal.tree",
+        "trees_violin": "bssvs_rates_equal_combined.trees",
+    },
+    {
+        "tag"         : "equal_rep3",
+        "tree_full"   : "bssvs_rates_equal.tree",
+        "trees_violin": "bssvs_rates_equal_combined.trees",
+    },
+    {
+        "tag"         : "proportional_rep1",
         "tree_full"   : "bssvs_rates_proportional.tree",
         "trees_violin": "bssvs_rates_proportional_combined.trees",
     },
     {
-        "tag"         : "stratified",
+        "tag"         : "proportional_rep2",
+        "tree_full"   : "bssvs_rates_proportional.tree",
+        "trees_violin": "bssvs_rates_proportional_combined.trees",
+    },
+    {
+        "tag"         : "proportional_rep3",
+        "tree_full"   : "bssvs_rates_proportional.tree",
+        "trees_violin": "bssvs_rates_proportional_combined.trees",
+    },
+    {
+        "tag"         : "stratified_rep1",
+        "tree_full"   : "bssvs_rates_stratified.tree",
+        "trees_violin": "bssvs_rates_stratified_combined.trees",
+    },
+    {
+        "tag"         : "stratified_rep2",
+        "tree_full"   : "bssvs_rates_stratified.tree",
+        "trees_violin": "bssvs_rates_stratified_combined.trees",
+    },
+    {
+        "tag"         : "stratified_rep3",
         "tree_full"   : "bssvs_rates_stratified.tree",
         "trees_violin": "bssvs_rates_stratified_combined.trees",
     },
@@ -77,6 +105,7 @@ def set_axis_font(ax):
     ax.tick_params(axis="both", which="major", labelsize=UNIFORM_FONTSIZE)
     ax.xaxis.label.set_size(UNIFORM_FONTSIZE)
     ax.yaxis.label.set_size(UNIFORM_FONTSIZE)
+
 
 def draw_tree_full(ax, tree_path, trait=TRAIT):
     tree = bt.loadNexus(tree_path, tip_regex=r'\|([0-9]+\-[0-9]+\-[0-9]+)')
@@ -276,6 +305,7 @@ def _make_figure(tree_full, trees_violin, out_name):
     plt.show()
     plt.close(fig)
     print(f"  ✓ saved → {out_name}.png / .pdf")
+
 
 if __name__ == "__main__":
     for ds in DATASETS:
