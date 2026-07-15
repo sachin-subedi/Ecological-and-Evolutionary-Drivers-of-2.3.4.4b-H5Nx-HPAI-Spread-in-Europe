@@ -1,5 +1,3 @@
-setwd("results/rates/Combined/")
-
 options(scipen = 999)
 
 library(dplyr)
@@ -8,12 +6,14 @@ library(ggnewscale)
 library(scales)
 library(grid)
 
+# ── Input / output pairs ──────────────────────────────────────────────────────
 datasets <- list(
   list(input_file = "HG_bf_equal.csv",        tag = "equal"),
   list(input_file = "HG_bf_proportional.csv", tag = "proportional"),
   list(input_file = "HG_bf_stratified.csv",   tag = "stratified")
 )
 
+# ---- 4 source regions x 5 habitats (main figure) ----------------------------
 hc_region_states <- list(
   "HC1_Atl" = c("CM", "FA", "FO", "GW", "WT"),
   "HC1_Con" = c("CM", "FA", "FO", "GW", "WT"),
@@ -21,6 +21,7 @@ hc_region_states <- list(
   "HC3_Bor" = c("CM", "FA", "FO", "GW", "WT")
 )
 
+# ---- Per-group colour ramps --------------------------------------------------
 group_cols <- list(
   "HC1_Atl" = c(alpha("#CD5C5C", 0.25), "#CD5C5C"),
   "HC1_Con" = c(alpha("#BCBD22", 0.25), "#BCBD22"),
@@ -28,6 +29,7 @@ group_cols <- list(
   "HC3_Bor" = c(alpha("#006D2C", 0.25), "#006D2C")
 )
 
+# ---- Side labels ------------------------------------------------------------
 group_titles <- c(
   "HC1_Atl" = "Atlantic",
   "HC1_Con" = "Western\nContinental",
@@ -91,6 +93,7 @@ side_label_df <- tibble(
   ymid  = unname(group_y_mids)
 )
 
+# ── Loop over datasets ────────────────────────────────────────────────────────
 for (ds in datasets) {
   
   input_file <- ds$input_file
@@ -101,7 +104,7 @@ for (ds in datasets) {
   df <- read.csv(input_file)
   
   df <- df %>%
-    rename(From = from, To = to, Rate = mean_rate) %>%
+    rename(From = from, To = to, Rate = median_rate) %>%
     mutate(
       Rate_plot = dplyr::case_when(
         From == To ~ NA_real_,
@@ -240,7 +243,7 @@ for (ds in datasets) {
   
   print(p)
   
-  out_file <- paste0("HG_Rates_heatmap_4regions_", tag, ".png")
+  out_file <- paste0("HG_Rates_heatmap_4regions_median_", tag, ".png")
   ggsave(
     filename = out_file,
     plot     = p,

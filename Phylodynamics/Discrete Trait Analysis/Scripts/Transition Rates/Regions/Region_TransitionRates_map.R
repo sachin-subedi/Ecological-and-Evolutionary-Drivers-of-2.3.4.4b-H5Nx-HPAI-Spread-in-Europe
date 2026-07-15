@@ -7,8 +7,6 @@ library(grid)
 library(scales)
 library(readr)
 
-setwd("Region/")
-
 options(scipen = 999)
 
 state_labels <- c(
@@ -50,7 +48,7 @@ cluster_lookup <- data.frame(
     "Slovenia", "Spain", "Sweden", "Switzerland", "Ukraine",
     "United Kingdom", "Belarus", "Montenegro"
   ),
-  Region = c(
+  GeoCluster = c(
     "HC_Cluster_2_Mediterranean", "HC_Cluster_2_Alpine",      "HC_Cluster_1_Atlantic",
     "HC_Cluster_2_Alpine",        "HC_Cluster_2_Continental", "HC_Cluster_2_Continental",
     "HC_Cluster_2_Mediterranean", "HC_Cluster_2_Continental", "HC_Cluster_2_Continental",
@@ -67,16 +65,15 @@ cluster_lookup <- data.frame(
   ),
   stringsAsFactors = FALSE
 )
-
 europe <- ne_countries(continent = "Europe", returnclass = "sf") %>%
   filter(!name %in% c("Russia", "Iceland"))
 
 europe_data <- europe %>%
   left_join(cluster_lookup, by = c("name" = "Country")) %>%
-  mutate(Region = factor(Region, levels = names(state_labels)))
+  mutate(GeoCluster = factor(GeoCluster, levels = names(state_labels)))
 
 cluster_centers <- data.frame(
-  Region = c(
+  GeoCluster = c(
     "HC_Cluster_1_Alpine",
     "HC_Cluster_1_Atlantic",
     "HC_Cluster_1_Continental",
@@ -114,11 +111,10 @@ cluster_centers <- data.frame(
   ),
   stringsAsFactors = FALSE
 )
-
 bf_files    <- c(
-  "Region_bf_equal.csv",
-  "Region_bf_proportional.csv",
-  "Region_bf_stratified.csv"
+  "GeoCluster_bf_equal.csv",
+  "GeoCluster_bf_proportional.csv",
+  "GeoCluster_bf_stratified.csv"
 )
 samp_labels <- c("equal", "proportional", "stratified")
 
@@ -139,16 +135,16 @@ for (i in seq_along(bf_files)) {
     ) %>%
     group_by(from, to) %>%
     summarise(
-      TransitionRate = mean(mean_rate, na.rm = TRUE),
+      TransitionRate = median(mean_rate, na.rm = TRUE),
       max_bf         = max(bayes_factor, na.rm = TRUE),
       .groups        = "drop"
     ) %>%
     mutate(rate_category = case_when(
       TransitionRate < 1                        ~ "<1",
       TransitionRate >= 1 & TransitionRate <= 2 ~ "1–2",
-      TransitionRate > 2                        ~ ">3"
+      TransitionRate > 2                        ~ ">2"
     )) %>%
-    mutate(rate_category = factor(rate_category, levels = c("<1", "1–2", ">3")))
+    mutate(rate_category = factor(rate_category, levels = c("<1", "1–2", ">2")))
   
   if (nrow(arrows) == 0) {
     warning("No decisive transitions (BF > 100) for ", tag, " — skipping.")
@@ -156,13 +152,13 @@ for (i in seq_along(bf_files)) {
   }
   
   arrow_data <- arrows %>%
-    left_join(cluster_centers, by = c("from" = "Region")) %>%
+    left_join(cluster_centers, by = c("from" = "GeoCluster")) %>%
     rename(x_start = x, y_start = y) %>%
-    left_join(cluster_centers, by = c("to" = "Region")) %>%
+    left_join(cluster_centers, by = c("to" = "GeoCluster")) %>%
     rename(x_end = x, y_end = y)
   
   maps <- ggplot(europe_data) +
-    geom_sf(aes(fill = Region), colour = "black", linewidth = 0.1) +
+    geom_sf(aes(fill = GeoCluster), colour = "black", linewidth = 0.1) +
     scale_fill_manual(
       values   = region_pal,
       labels   = state_labels,
@@ -184,7 +180,7 @@ for (i in seq_along(bf_files)) {
     ) +
     scale_linewidth_manual(
       name   = "Transition Rate",
-      values = c("<1" = 0.5, "1–2" = 1.0, ">3" = 2.0)
+      values = c("<1" = 0.5, "1–2" = 1.0, ">2" = 2.0)
     ) +
     guides(fill = "none") +
     coord_sf(xlim = c(-12, 45), ylim = c(30, 72), expand = FALSE) +
@@ -203,7 +199,7 @@ for (i in seq_along(bf_files)) {
       legend.key.size      = unit(1.2, "cm")
     )
   
-  out_png <- paste0("Region_HC_TransitionRates_", tag, ".png")
+  out_png <- paste0("GeoCluster_HC_TransitionRates_median_", tag, ".png")
   ggsave(
     filename = out_png,
     plot     = maps,
