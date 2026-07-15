@@ -1,19 +1,14 @@
-setwd("Combined/")
-
 options(scipen = 999)
-
 library(dplyr)
 library(ggplot2)
 library(ggnewscale)
 library(scales)
 library(grid)
-
 datasets <- list(
   list(input_file = "HG_bf_equal.csv",        tag = "equal"),
   list(input_file = "HG_bf_proportional.csv", tag = "proportional"),
   list(input_file = "HG_bf_stratified.csv",   tag = "stratified")
 )
-
 hc_region_states <- list(
   "HC1_Alp" = c("CM", "FO", "GW", "WT"),
   "HC1_Atl" = c("CM", "FA", "FO", "GW", "UB", "WT"),
@@ -52,9 +47,7 @@ group_titles <- c(
   "HC3_Bor" = "Boreal\nBaltic",
   "HC4_Med" = "Iberian"
 )
-
 groups_keep <- names(hc_region_states)
-
 rename_labels <- function(x) {
   hab_map <- c(CM = "Coastal", FA = "Farm", FO = "Forest",
                GW = "Grassland", WT = "Wetland", UB = "Urban")
@@ -67,13 +60,10 @@ rename_labels <- function(x) {
   }
   x_chr
 }
-
 get_group <- function(x) sub("^(HC\\d+_[A-Za-z]+)_.*$", "\\1", as.character(x))
-
 global_max    <- 3
 LEG_BARWIDTH  <- unit(55, "pt")
 LEG_BARHEIGHT <- unit(6,  "pt")
-
 panel_theme <- theme_minimal(base_size = 16) +
   theme(
     panel.grid  = element_blank(),
@@ -97,18 +87,14 @@ nodes <- unlist(
     if (i < length(groups_keep)) c(grp, paste0("GAP", i)) else grp
   })
 )
-
 group_y_mids <- sapply(groups_keep, function(g) {
   pos <- match(paste0(g, "_", hc_region_states[[g]]), nodes)
   mean(c(min(pos), max(pos)))
 })
-
 side_label_df <- tibble(
   label = unname(group_titles[groups_keep]),
   ymid  = unname(group_y_mids)
 )
-
-# ── Loop over datasets ────────────────────────────────────────────────────────
 for (ds in datasets) {
   
   input_file <- ds$input_file
@@ -119,7 +105,7 @@ for (ds in datasets) {
   df <- read.csv(input_file)
   
   df <- df %>%
-    rename(From = from, To = to, Rate = mean_rate) %>%
+    rename(From = from, To = to, Rate = median_rate) %>%
     mutate(
       Rate_plot = dplyr::case_when(
         From == To ~ NA_real_,
@@ -258,7 +244,7 @@ for (ds in datasets) {
   
   print(p)
   
-  out_file <- paste0("Regions_all_HG_Rates_heatmap_", tag, ".png")
+  out_file <- paste0("Regions_all_HG_Rates_heatmap_median_", tag, ".png")
   ggsave(
     filename = out_file,
     plot     = p,

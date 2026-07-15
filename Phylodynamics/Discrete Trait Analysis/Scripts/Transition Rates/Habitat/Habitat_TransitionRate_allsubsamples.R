@@ -2,8 +2,6 @@ options(scipen = 999)
 library(dplyr)
 library(ggplot2)
 
-setwd("Habitat/")
-
 bf_files <- c(
   "Habitat_bf_CI_equal.csv",
   "Habitat_bf_CI_proportional.csv",
@@ -59,9 +57,9 @@ for (i in seq_along(bf_files)) {
     rename(
       From  = from,
       To    = to,
-      Rate  = mean_real_rate, 
-      Lower = ci_lower,
-      Upper = ci_upper
+      Rate  = mean_real_rate,   # indicator-weighted rate
+      Lower = ci_lower,         # ← 95% equal-tailed credible interval
+      Upper = ci_upper          # ← 95% equal-tailed credible interval
     )
   
   df_bar <- df %>%
@@ -69,9 +67,9 @@ for (i in seq_along(bf_files)) {
     dplyr::filter(bayes_factor >= 10) %>%
     dplyr::group_by(From, To) %>%
     dplyr::summarise(
-      Rate  = mean(Rate),
-      Lower = mean(Lower),
-      Upper = mean(Upper),
+      Rate  = median(Rate),
+      Lower = median(Lower),
+      Upper = median(Upper),
       .groups = "drop"
     ) %>%
     dplyr::mutate(
@@ -108,7 +106,7 @@ for (i in seq_along(bf_files)) {
   
   print(p_bar)
   
-  out_name <- paste0("Habitat_Rates_barplot_", tag_i, "_light0.5_CI.png")
+  out_name <- paste0("Habitat_Rates_barplot_median_", tag_i, "_light0.5_CI.png")
   ggsave(
     filename = out_name,
     plot     = p_bar,
@@ -129,3 +127,4 @@ df %>%
   ) %>%
   select(From, To, hpd_lower, hpd_upper, Lower, Upper, hpd_width, ci_width, diff) %>%
   arrange(desc(abs(diff)))
+
