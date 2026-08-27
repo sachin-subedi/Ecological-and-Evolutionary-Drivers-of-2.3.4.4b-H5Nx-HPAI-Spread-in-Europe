@@ -4,7 +4,6 @@ library(purrr)
 library(coda)
 library(readr)
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
 find_k <- function(m) {
   for (n in 1:m) {
     if (m == n * (n - 1)) return(n)
@@ -26,7 +25,6 @@ burnin_pc       <- 50
 reps            <- c("rep1", "rep2", "rep3")
 sampling_labels <- c("equal", "proportional", "stratified")
 
-# Build a data frame of all 9 combinations
 file_manifest <- expand.grid(rep = reps, sampling = sampling_labels,
                              stringsAsFactors = FALSE) %>%
   mutate(
@@ -37,7 +35,6 @@ message("Files expected:")
 walk(file_manifest$log_file, ~ message("  ", .x,
                                        if (file.exists(.x)) "  [found]" else "  [MISSING]"))
 
-# ── Core processing function ─────────────────────────────────────────────────
 process_log_file <- function(log_file, burnin_pc = 50) {
   
   log_df <- read.delim(log_file, check.names = FALSE, sep = "\t")
@@ -69,7 +66,7 @@ process_log_file <- function(log_file, burnin_pc = 50) {
       hpd_lower      = HPDinterval(as.mcmc(real_vec), prob = 0.95)[1, "lower"],
       hpd_upper      = HPDinterval(as.mcmc(real_vec), prob = 0.95)[1, "upper"],
       ci_lower       = unname(quantile(real_vec, 0.025)),
-      ci_upper       = unname(quantile(real_vec, 0.975)), 
+      ci_upper       = unname(quantile(real_vec, 0.975)),
       bayes_factor   = (mean(ind_vec) * (1 - q_prior)) /
         ((1 - mean(ind_vec)) * q_prior)
     )
@@ -79,7 +76,6 @@ process_log_file <- function(log_file, burnin_pc = 50) {
     mutate(across(where(is.numeric), \(x) round(x, 3)))
 }
 
-# ── Process all files ────────────────────────────────────────────────────────
 all_results <- list()
 
 for (i in seq_len(nrow(file_manifest))) {
