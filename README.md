@@ -26,7 +26,7 @@ Data filtering, stratified subsampling, and the step-by-step workflow used to pr
 -   `Pipeline.Rmd`\
     This repository follows a reproducible pipeline that turns raw sequence/metadata into analysis-ready inputs for BEAST discrete-trait phylogeography and GLM models. We retrieved all available European H5Nx hemagglutinin (HA) nucleotide sequences and metadata from GISAID, integrated wild-bird ecological information from AVONET, and assigned discrete traits (habitat and host type) using isolate/host metadata with context-specific rules (e.g., Farm for agricultural production species such as poultry, Urban for human cases and residential domestic mammals such as pet cats). To define geographically coherent regions, we built 10 data-driven Regions in R: Atlantic, Western Continental, Eastern Continental, Eastern Alpine, Central Alpine, Pannonian, Boreal Baltic, Scandinavian Highlands, Southeast Mediterranean, and Iberian.
 -   `Subsampling.Rmd`\
-    Generates three subsamples (equal, propotional and stratified) used across downstream BEAST analyses.
+    Generates three subsamples (equal, propotional and stratified) used across downstream BEAST analyses with three replicates for each.
 
 ------------------------------------------------------------------------
 
