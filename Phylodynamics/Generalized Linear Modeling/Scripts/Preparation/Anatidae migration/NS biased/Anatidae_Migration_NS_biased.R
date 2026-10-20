@@ -10,12 +10,14 @@ suppressPackageStartupMessages({
   library(igraph)
   library(purrr)
   library(scales)
+  library(openxlsx)
 })
 
 sf_use_s2(TRUE)
 
 csv_path <- "filtered_data_combined_Anatidae.csv"
 out_dir  <- "NS_biased/"
+
 
 years    <- 2016:2025
 DIAG_EPS <- 1e-11
@@ -31,10 +33,6 @@ jacc_fast <- function(li, lj){
   if (uni == 0) 0 else inter / uni
 }
 
-# ── North–South orientation term ──────────────────────────────────────────────
-# theta = |cos(bearing from North)| = |dlat| / sqrt(dlat^2 + (dlon*cos(lat))^2)
-#   theta = 1  -> purely meridional (North–South) edge
-#   theta = 0  -> purely zonal      (East–West)  edge
 ns_align <- function(lat_i, lon_i, lat_j, lon_j){
   dlat <- lat_j - lat_i
   mlat <- (lat_i + lat_j) / 2
@@ -130,7 +128,7 @@ cluster_region_lookup <- tribble(
   "Croatia",                   "HC_Cluster_2_Continental",
   "Cyprus",                    "HC_Cluster_2_Mediterranean",
   "Czechia",                   "HC_Cluster_2_Continental",
-  "Denmark",                   "HC_Cluster_2_Continental",
+  "Denmark",                   "HC_Cluster_1_Continental",
   "Estonia",                   "HC_Cluster_3_Boreal",
   "Finland",                   "HC_Cluster_3_Boreal",
   "France",                    "HC_Cluster_1_Atlantic",
@@ -282,7 +280,6 @@ DIST_all <- geodist::geodist(
   measure = "geodesic", paired = TRUE
 ) / 1000
 
-# ── N–S orientation term per candidate edge (constant across years/seasons) ───
 NS_all <- ns_align(lat_ai, lon_ai, lat_aj, lon_aj)
 
 A_ids_all <- nodes_tbl$grid_id[edges_all$src]
@@ -320,7 +317,6 @@ build_migratory_for_year <- function(y){
       }, src, dst, USE.NAMES = FALSE)
       keep2 <- jacc > 0
       if (any(keep2)){
-        # N–S weighted: W = (Jaccard * orientation) / distance
         W <- jacc[keep2] * NS_all[keep][keep2] /
           pmax(as.numeric(DIST_all[keep][keep2]), 1e-6)
         A <- ifelse(lat_i_y[keep2] <= lat_j_y[keep2], Gs[keep2], Gt[keep2])
@@ -348,7 +344,6 @@ build_migratory_for_year <- function(y){
       }, src, dst, USE.NAMES = FALSE)
       keep2 <- jacc > 0
       if (any(keep2)){
-        # N–S weighted: W = (Jaccard * orientation) / distance
         W <- jacc[keep2] * NS_all[keep][keep2] /
           pmax(as.numeric(DIST_all[keep][keep2]), 1e-6)
         A <- ifelse(lat_i_y[keep2] >= lat_j_y[keep2], Gs[keep2], Gt[keep2])
@@ -383,7 +378,6 @@ build_nonmig_for_year <- function(y){
   }, src, dst, USE.NAMES = FALSE)
   keep2 <- jacc > 0
   if (!any(keep2)) return(NULL)
-  # N–S weighted: W = (Jaccard * orientation) / distance
   W <- jacc[keep2] * NS_all[keep][keep2] /
     pmax(as.numeric(DIST_all[keep][keep2]), 1e-6)
   bind_rows(
@@ -426,9 +420,9 @@ M_DEN <- to_square(avg_by_season("migratory","EDGE_COUNT"))
 M_SUM <- to_square(avg_by_season("migratory","SUMW"))
 M_MEN <- to_square(avg_by_season("migratory","MEANW"))
 
-write_matrix_tsv(M_DEN, file.path(mig_dir, "Anatidae_migratory_EDGE_COUNT_NS.tsv"))
-write_matrix_tsv(M_SUM, file.path(mig_dir, "Anatidae_migratory_SUMW_NS.tsv"))
-write_matrix_tsv(M_MEN, file.path(mig_dir, "Anatidae_migratory_MEANW_NS.tsv"))
+write_matrix_tsv(M_DEN, file.path(mig_dir, "Anatidae_migratory_EDGE_COUNT_NS_v2.tsv"))
+write_matrix_tsv(M_SUM, file.path(mig_dir, "Anatidae_migratory_SUMW_NS_v2.tsv"))
+write_matrix_tsv(M_MEN, file.path(mig_dir, "Anatidae_migratory_MEANW_NS_v2.tsv"))
 message("✓ Wrote MIGRATORY matrices → ", mig_dir)
 
 nm_dir <- file.path(out_dir, "season_nonmig_raw")
@@ -438,10 +432,9 @@ NM_DEN <- to_square(avg_by_season("nonmig","EDGE_COUNT"))
 NM_SUM <- to_square(avg_by_season("nonmig","SUMW"))
 NM_MEN <- to_square(avg_by_season("nonmig","MEANW"))
 
-write_matrix_tsv(NM_DEN, file.path(nm_dir, "Anatidae_nonmig_EDGE_COUNT_NS.tsv"))
-write_matrix_tsv(NM_SUM, file.path(nm_dir, "Anatidae_nonmig_SUMW_NS.tsv"))
-write_matrix_tsv(NM_MEN, file.path(nm_dir, "Anatidae_nonmig_MEANW_NS.tsv"))
-message("✓ Wrote NONMIG matrices → ", nm_dir)
+write_matrix_tsv(NM_DEN, file.path(nm_dir, "Anatidae_nonmig_EDGE_COUNT_NS_v2.tsv"))
+write_matrix_tsv(NM_SUM, file.path(nm_dir, "Anatidae_nonmig_SUMW_NS_v2.tsv"))
+write_matrix_tsv(NM_MEN, file.path(nm_dir, "Anatidae_nonmig_MEANW_NS_v2.tsv"))
 
 M_SUM_main <- M_SUM
 
@@ -461,7 +454,6 @@ nodes_mig0 <- birds_grid %>%
 nodes_mig <- merge(grid_05["grid_id"], nodes_mig0, by = "grid_id", all = FALSE)
 ndf       <- nodes_mig %>% st_drop_geometry()
 
-# ── kNN edges on migration nodes ─────────────────────────────────────────────
 set.seed(42)
 coords_m <- ndf %>% select(lon, lat) %>% as.matrix()
 n_m      <- nrow(coords_m)
@@ -483,7 +475,6 @@ DIST_ij2 <- geodist::geodist(
   measure = "geodesic", paired = TRUE
 ) / 1000
 
-# N–S orientation term for migration-node edges
 NS_ij2 <- ns_align(
   ndf$lat[edges_idx2$src], ndf$lon[edges_idx2$src],
   ndf$lat[edges_idx2$dst], ndf$lon[edges_idx2$dst]
@@ -493,7 +484,6 @@ taxa  <- ndf$taxa_list_mig
 J_ij2 <- purrr::map2_dbl(edges_idx2$src, edges_idx2$dst,
                          \(i,j) jacc_fast(taxa[[i]], taxa[[j]]))
 
-# N–S weighted: W = (Jaccard * orientation) / distance
 W_ij2 <- J_ij2 * NS_ij2 / pmax(as.numeric(DIST_ij2), 1e-6)
 
 edges_mig <- tibble(
@@ -709,14 +699,14 @@ build_backbone_plot(
   nrow_facet  = 2,
   fig_w       = 26,
   fig_h       = 12,
-  out_path    = file.path(out_10, "Anatidae_10cluster_Backbone_NS.png")
+  out_path    = file.path(out_10, "Anatidae_10cluster_Backbone_NS_v2.png")
 )
 
 message("• Plotting 10-cluster Sankey …")
 p_sank10 <- build_sankey(clusters_10, cluster_pretty_10_sankey, cluster_pal_10, M_SUM_main)
-ggsave(file.path(out_10, "Anatidae_10cluster_Sankey_NS.png"),
+ggsave(file.path(out_10, "Anatidae_10cluster_Sankey_NS_v2.png"),
        p_sank10, width=12, height=8, dpi=300, units="in", bg="white")
-message("✓ Saved: ", file.path(out_10, "Anatidae_10cluster_Sankey_NS.png"))
+message("✓ Saved: ", file.path(out_10, "Anatidae_10cluster_Sankey_NS_v2.png"))
 
 message("• Plotting 4-cluster backbone …")
 build_backbone_plot(
@@ -727,14 +717,14 @@ build_backbone_plot(
   nrow_facet  = 1,
   fig_w       = 18,
   fig_h       = 8,
-  out_path    = file.path(out_4, "Anatidae_4cluster_Backbone_NS.png")
+  out_path    = file.path(out_4, "Anatidae_4cluster_Backbone_NS_v2.png")
 )
 
 message("• Plotting 4-cluster Sankey …")
 p_sank4 <- build_sankey(clusters_4, cluster_pretty_4_sankey, cluster_pal_4, M_SUM_main)
-ggsave(file.path(out_4, "Anatidae_4cluster_Sankey_NS.png"),
+ggsave(file.path(out_4, "Anatidae_4cluster_Sankey_NS_v2.png"),
        p_sank4, width=9, height=6, dpi=300, units="in", bg="white")
-message("✓ Saved: ", file.path(out_4, "Anatidae_4cluster_Sankey_NS.png"))
+message("✓ Saved: ", file.path(out_4, "Anatidae_4cluster_Sankey_NS_v2.png"))
 
 message("• Plotting 4-cluster backbone (poster 2×2) …")
 p_poster <- ggplot() +
@@ -790,5 +780,58 @@ p_poster <- ggplot() +
     plot.margin      = margin(t=5, r=15, b=10, l=10)
   )
 
-ggsave(file.path(out_4, "Anatidae_4cluster_Backbone_poster_2x2_NS.png"),
+ggsave(file.path(out_4, "Anatidae_4cluster_Backbone_poster_2x2_NS_v2.png"),
        p_poster, width=12, height=12, dpi=300, units="in", bg="white")
+
+
+extract_nodes_tbl <- function(bb, pretty_vec){
+  if (is.null(bb$nodes)) return(NULL)
+  bb$nodes %>%
+    st_drop_geometry() %>%
+    transmute(
+      grid_id        = grid_id,
+      longitude      = lon,
+      latitude       = lat,
+      geo_cluster    = as.character(GeoCluster),
+      geo_region     = unname(pretty_vec[as.character(GeoCluster)]),
+      genus_richness = richness_mig,
+      betweenness    = betweenness
+    ) %>%
+    arrange(geo_cluster, desc(betweenness))
+}
+
+extract_edges_tbl <- function(bb, pretty_vec){
+  if (is.null(bb$edges_ctx)) return(NULL)
+  bb$edges_ctx %>%
+    st_drop_geometry() %>%
+    transmute(
+      source_id           = source_id,
+      target_id           = target_id,
+      geo_cluster         = as.character(GeoCluster),
+      geo_region          = unname(pretty_vec[as.character(GeoCluster)]),
+      edge_weight         = W,
+      jaccard_similarity  = jaccard,
+      ns_alignment        = ns_align,
+      distance_km         = dist_km,
+      weighting_condition = "NS_biased: W = (genus Jaccard similarity x N-S orientation) / great-circle distance",
+      top25pct_plotted    = top
+    ) %>%
+    arrange(geo_cluster, desc(edge_weight))
+}
+
+nodes_10_tbl <- extract_nodes_tbl(bb10, cluster_pretty_10)
+edges_10_tbl <- extract_edges_tbl(bb10, cluster_pretty_10)
+nodes_4_tbl  <- extract_nodes_tbl(bb4,  cluster_pretty_4)
+edges_4_tbl  <- extract_edges_tbl(bb4,  cluster_pretty_4)
+
+workbook_sheets <- list(
+  "Nodes_10cluster" = nodes_10_tbl,
+  "Edges_10cluster" = edges_10_tbl,
+  "Nodes_4cluster"  = nodes_4_tbl,
+  "Edges_4cluster"  = edges_4_tbl
+)
+workbook_sheets <- workbook_sheets[!vapply(workbook_sheets, is.null, logical(1))]
+
+wb_path <- file.path(out_dir, "Anatidae_network_summary_NS_v2.xlsx")
+openxlsx::write.xlsx(workbook_sheets, file = wb_path, overwrite = TRUE, asTable = TRUE)
+

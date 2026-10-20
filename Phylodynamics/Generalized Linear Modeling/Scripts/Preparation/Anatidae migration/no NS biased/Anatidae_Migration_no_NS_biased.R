@@ -2,7 +2,7 @@ suppressPackageStartupMessages({
   library(tidyverse)
   library(sf)
   library(rnaturalearth)
-  library(FNN),
+  library(FNN)
   library(geodist)
   library(lubridate)
   library(readr)
@@ -10,16 +10,20 @@ suppressPackageStartupMessages({
   library(igraph)
   library(purrr)
   library(scales)
+  library(openxlsx)
 })
 
 sf_use_s2(TRUE)
 
+
+# -------------------------- USER PATHS ----------------------------------------
 csv_path <- "filtered_data_combined_Anatidae.csv"
-out_dir  <- "no_NS_biased/"
+out_dir  <- "eBird/Migration/Anatidae_migration_again/no_NS_biased/"
 
 years    <- 2016:2025
 DIAG_EPS <- 1e-11
 
+# -------------------------- Helpers -------------------------------------------
 ensure_dir <- function(p){
   if (!dir.exists(p)) dir.create(p, recursive = TRUE, showWarnings = FALSE)
 }
@@ -119,7 +123,7 @@ cluster_region_lookup <- tribble(
   "Croatia",                   "HC_Cluster_2_Continental",
   "Cyprus",                    "HC_Cluster_2_Mediterranean",
   "Czechia",                   "HC_Cluster_2_Continental",
-  "Denmark",                   "HC_Cluster_2_Continental",
+  "Denmark",                   "HC_Cluster_1_Continental",
   "Estonia",                   "HC_Cluster_3_Boreal",
   "Finland",                   "HC_Cluster_3_Boreal",
   "France",                    "HC_Cluster_1_Atlantic",
@@ -222,6 +226,7 @@ birds$doy    <- yday(birds$date)
 birds$season <- season_from_doy(birds$doy)
 birds        <- birds %>% filter(year %in% years)
 
+# -------------------------- Grid ----------------------------------------------
 eu_3035       <- st_transform(europe, 3035)
 eu_union_3035 <- st_union(eu_3035)
 europe_union  <- st_transform(eu_union_3035, 4326)
@@ -287,7 +292,8 @@ node_genus_by_year_season <- function(y, s){
 }
 
 build_migratory_for_year <- function(y){
-
+  
+  # SPRING
   ng_spr    <- node_genus_by_year_season(y, "spring")
   spring_df <- NULL
   if (!is.null(ng_spr)){
@@ -406,10 +412,9 @@ M_DEN <- to_square(avg_by_season("migratory","EDGE_COUNT"))
 M_SUM <- to_square(avg_by_season("migratory","SUMW"))
 M_MEN <- to_square(avg_by_season("migratory","MEANW"))
 
-write_matrix_tsv(M_DEN, file.path(mig_dir, "Anatidae_migratory_EDGE_COUNT_No_NS.tsv"))
-write_matrix_tsv(M_SUM, file.path(mig_dir, "Anatidae_migratory_SUMW_No_NS.tsv"))
-write_matrix_tsv(M_MEN, file.path(mig_dir, "Anatidae_migratory_MEANW_No_NS.tsv"))
-message("✓ Wrote MIGRATORY matrices → ", mig_dir)
+write_matrix_tsv(M_DEN, file.path(mig_dir, "Anatidae_migratory_EDGE_COUNT_No_NS_v2.tsv"))
+write_matrix_tsv(M_SUM, file.path(mig_dir, "Anatidae_migratory_SUMW_No_NS_v2.tsv"))
+write_matrix_tsv(M_MEN, file.path(mig_dir, "Anatidae_migratory_MEANW_No_NS_v2.tsv"))
 
 nm_dir <- file.path(out_dir, "season_nonmig_raw")
 ensure_dir(nm_dir)
@@ -418,10 +423,9 @@ NM_DEN <- to_square(avg_by_season("nonmig","EDGE_COUNT"))
 NM_SUM <- to_square(avg_by_season("nonmig","SUMW"))
 NM_MEN <- to_square(avg_by_season("nonmig","MEANW"))
 
-write_matrix_tsv(NM_DEN, file.path(nm_dir, "Anatidae_nonmig_EDGE_COUNT_No_NS.tsv"))
-write_matrix_tsv(NM_SUM, file.path(nm_dir, "Anatidae_nonmig_SUMW_No_NS.tsv"))
-write_matrix_tsv(NM_MEN, file.path(nm_dir, "Anatidae_nonmig_MEANW_No_NS.tsv"))
-message("✓ Wrote NONMIG matrices → ", nm_dir)
+write_matrix_tsv(NM_DEN, file.path(nm_dir, "Anatidae_nonmig_EDGE_COUNT_No_NS_v2.tsv"))
+write_matrix_tsv(NM_SUM, file.path(nm_dir, "Anatidae_nonmig_SUMW_No_NS_v2.tsv"))
+write_matrix_tsv(NM_MEN, file.path(nm_dir, "Anatidae_nonmig_MEANW_No_NS_v2.tsv"))
 
 M_SUM_NS <- M_SUM
 
@@ -441,7 +445,6 @@ nodes_mig0 <- birds_grid %>%
 nodes_mig <- merge(grid_05["grid_id"], nodes_mig0, by = "grid_id", all = FALSE)
 ndf       <- nodes_mig %>% st_drop_geometry()
 
-# ── kNN edges on migration nodes ─────────────────────────────────────────────
 set.seed(42)
 coords_m <- ndf %>% select(lon, lat) %>% as.matrix()
 n_m      <- nrow(coords_m)
@@ -681,14 +684,14 @@ build_backbone_plot(
   nrow_facet  = 2,
   fig_w       = 26,
   fig_h       = 12,
-  out_path    = file.path(out_10, "Anatidae_10cluster_Backbone_No_NS.png")
+  out_path    = file.path(out_10, "Anatidae_10cluster_Backbone_No_NS_v2.png")
 )
 
 message("• Plotting 10-cluster Sankey …")
 p_sank10 <- build_sankey(clusters_10, cluster_pretty_10_sankey, cluster_pal_10, M_SUM_NS)
-ggsave(file.path(out_10, "Anatidae_10cluster_Sankey_No_NS.png"),
+ggsave(file.path(out_10, "Anatidae_10cluster_Sankey_No_NS_v2.png"),
        p_sank10, width=12, height=8, dpi=300, units="in", bg="white")
-message("✓ Saved: ", file.path(out_10, "Anatidae_10cluster_Sankey_No_NS.png"))
+message("✓ Saved: ", file.path(out_10, "Anatidae_10cluster_Sankey_No_NS_v2.png"))
 
 message("• Plotting 4-cluster backbone …")
 build_backbone_plot(
@@ -699,14 +702,14 @@ build_backbone_plot(
   nrow_facet  = 1,
   fig_w       = 18,
   fig_h       = 8,
-  out_path    = file.path(out_4, "Anatidae_4cluster_Backbone_No_NS.png")
+  out_path    = file.path(out_4, "Anatidae_4cluster_Backbone_No_NS_v2.png")
 )
 
 message("• Plotting 4-cluster Sankey …")
 p_sank4 <- build_sankey(clusters_4, cluster_pretty_4_sankey, cluster_pal_4, M_SUM_NS)
-ggsave(file.path(out_4, "Anatidae_4cluster_Sankey_No_NS.png"),
+ggsave(file.path(out_4, "Anatidae_4cluster_Sankey_No_NS_v2.png"),
        p_sank4, width=9, height=6, dpi=300, units="in", bg="white")
-message("✓ Saved: ", file.path(out_4, "Anatidae_4cluster_Sankey_No_NS.png"))
+message("✓ Saved: ", file.path(out_4, "Anatidae_4cluster_Sankey_No_NS_v2.png"))
 
 message("• Plotting 4-cluster backbone (poster 2×2) …")
 p_poster <- ggplot() +
@@ -762,6 +765,58 @@ p_poster <- ggplot() +
     plot.margin      = margin(t=5, r=15, b=10, l=10)
   )
 
-ggsave(file.path(out_4, "Anatidae_4cluster_Backbone_poster_2x2_No_NS.png"),
+ggsave(file.path(out_4, "Anatidae_4cluster_Backbone_poster_2x2_No_NS_v2.png"),
        p_poster, width=12, height=12, dpi=300, units="in", bg="white")
+message("✓ Saved: ", file.path(out_4, "Anatidae_4cluster_Backbone_poster_2x2_No_NS_v2.png"))
+
+
+extract_nodes_tbl <- function(bb, pretty_vec){
+  if (is.null(bb$nodes)) return(NULL)
+  bb$nodes %>%
+    st_drop_geometry() %>%
+    transmute(
+      grid_id        = grid_id,
+      longitude      = lon,
+      latitude       = lat,
+      geo_cluster    = as.character(GeoCluster),
+      geo_region     = unname(pretty_vec[as.character(GeoCluster)]),
+      genus_richness = richness_mig,
+      betweenness    = betweenness
+    ) %>%
+    arrange(geo_cluster, desc(betweenness))
+}
+
+extract_edges_tbl <- function(bb, pretty_vec){
+  if (is.null(bb$edges_ctx)) return(NULL)
+  bb$edges_ctx %>%
+    st_drop_geometry() %>%
+    transmute(
+      source_id           = source_id,
+      target_id           = target_id,
+      geo_cluster         = as.character(GeoCluster),
+      geo_region          = unname(pretty_vec[as.character(GeoCluster)]),
+      edge_weight         = W,
+      jaccard_similarity  = jaccard,
+      distance_km         = dist_km,
+      weighting_condition = "No_NS: W = genus Jaccard similarity / great-circle distance",
+      top25pct_plotted    = top
+    ) %>%
+    arrange(geo_cluster, desc(edge_weight))
+}
+
+nodes_10_tbl <- extract_nodes_tbl(bb10, cluster_pretty_10)
+edges_10_tbl <- extract_edges_tbl(bb10, cluster_pretty_10)
+nodes_4_tbl  <- extract_nodes_tbl(bb4,  cluster_pretty_4)
+edges_4_tbl  <- extract_edges_tbl(bb4,  cluster_pretty_4)
+
+workbook_sheets <- list(
+  "Nodes_10cluster" = nodes_10_tbl,
+  "Edges_10cluster" = edges_10_tbl,
+  "Nodes_4cluster"  = nodes_4_tbl,
+  "Edges_4cluster"  = edges_4_tbl
+)
+workbook_sheets <- workbook_sheets[!vapply(workbook_sheets, is.null, logical(1))]
+
+wb_path <- file.path(out_dir, "Anatidae_network_summary_No_NS_v2.xlsx")
+openxlsx::write.xlsx(workbook_sheets, file = wb_path, overwrite = TRUE, asTable = TRUE)
 

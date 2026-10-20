@@ -51,7 +51,7 @@ cluster_lookup <- data.frame(
   GeoCluster = c(
     "HC_Cluster_2_Mediterranean", "HC_Cluster_2_Alpine",      "HC_Cluster_1_Atlantic",
     "HC_Cluster_2_Alpine",        "HC_Cluster_2_Continental", "HC_Cluster_2_Continental",
-    "HC_Cluster_2_Mediterranean", "HC_Cluster_2_Continental", "HC_Cluster_2_Continental",
+    "HC_Cluster_2_Mediterranean", "HC_Cluster_2_Continental", "HC_Cluster_1_Continental",
     "HC_Cluster_3_Boreal",        "HC_Cluster_3_Boreal",      "HC_Cluster_1_Atlantic",
     "HC_Cluster_1_Continental",   "HC_Cluster_2_Mediterranean","HC_Cluster_2_Pannonian",
     "HC_Cluster_1_Atlantic",      "HC_Cluster_2_Mediterranean","HC_Cluster_2_Continental",

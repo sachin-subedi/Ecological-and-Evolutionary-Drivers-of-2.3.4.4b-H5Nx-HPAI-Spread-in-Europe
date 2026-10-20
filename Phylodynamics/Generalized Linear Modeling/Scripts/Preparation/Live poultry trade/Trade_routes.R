@@ -67,7 +67,7 @@ cluster_region_lookup <- tribble(
   "Croatia",                      "HC_Cluster_2_Continental",
   "Cyprus",                       "HC_Cluster_2_Mediterranean",
   "Czechia",                      "HC_Cluster_2_Continental",
-  "Denmark",                      "HC_Cluster_2_Continental",
+  "Denmark",                      "HC_Cluster_1_Continental",
   "Estonia",                      "HC_Cluster_3_Boreal",
   "Finland",                      "HC_Cluster_3_Boreal",
   "France",                       "HC_Cluster_1_Atlantic",
