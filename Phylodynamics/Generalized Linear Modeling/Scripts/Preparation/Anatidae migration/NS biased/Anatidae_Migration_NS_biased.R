@@ -16,7 +16,7 @@ suppressPackageStartupMessages({
 sf_use_s2(TRUE)
 
 csv_path <- "filtered_data_combined_Anatidae.csv"
-out_dir  <- "NS_biased/"
+out_dir  <- "NS_biased"
 
 
 years    <- 2016:2025
